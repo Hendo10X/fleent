@@ -1,0 +1,22 @@
+{
+  "items": [
+    {
+      "icon": "ArrowDown",
+      "color": "orange",
+      "heading": "3-Task Limit. No Overload.",
+      "body": "Visual peace. We hide the noise and only show your top 3 tasks. No scrolling through endless lists that trigger \"waiting mode\" or panic."
+    },
+    {
+      "icon": "HandTap",
+      "color": "green",
+      "heading": "AI Friction-Mapping. One-Tap Starts.",
+      "body": "Instant activation. One tap \"flips\" any daunting goal into its smallest physical starting action. Our AI handles the mental labor of planning so you can just move."
+    },
+    {
+      "icon": "CalendarDots",
+      "color": "blue",
+      "heading": "Calendar-First. Zero Guilt.",
+      "body": "Temporal awareness. We sync your schedule and nominate tasks that actually fit your time gaps. No \"overdue\" red badges—just a clear window of what's possible right now."
+    }
+  ]
+}

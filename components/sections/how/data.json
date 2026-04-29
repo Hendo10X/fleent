@@ -1,0 +1,43 @@
+{
+  "eyebrow": "How it works",
+  "heading": "Get started in minutes",
+  "subheading": "Momentum is 60 seconds away. No complex setup. No \"productivity systems\" to learn. Fleent is designed to get out of your way so you can finally get started.",
+  "steps": [
+    {
+      "id": "sync",
+      "title": "Sync your space.",
+      "color": "orange",
+      "body": "One-tap calendar integration. Connect your Google or Outlook calendar. Fleent doesn't just show your meetings; it scans for the quiet gaps where your best work actually happens.",
+      "image": {
+        "src": "/images/Fleent-Calender-gaps.svg",
+        "alt": "A weekly calendar showing open gaps between meetings.",
+        "width": 463,
+        "height": 250
+      }
+    },
+    {
+      "id": "dump",
+      "title": "Dump the noise.",
+      "color": "blue",
+      "body": "Speak or type your chaos. Brain-dump your tasks without worrying about formatting or priority. Our AI extracts the actionable bits and nominates the top 3 that fit your current energy level.",
+      "image": {
+        "src": "/images/Fleent-dumpthenoise.svg",
+        "alt": "A 'what are you doing today?' input with Fleent adding the task underneath.",
+        "width": 411,
+        "height": 199
+      }
+    },
+    {
+      "id": "flip",
+      "title": "Flip to begin.",
+      "color": "green",
+      "body": "The first step is the smallest. Tap the Saffron \"Flip\" button on any task. Watch your \"Big Project\" turn into a 10-second physical action. Do that one thing, and the rest will follow.",
+      "image": {
+        "src": "/images/fleent-fliptobegin.svg",
+        "alt": "Streak stats above a kitten care checklist on a lavender panel.",
+        "width": 411,
+        "height": 215
+      }
+    }
+  ]
+}

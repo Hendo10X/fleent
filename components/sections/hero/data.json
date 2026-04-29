@@ -1,0 +1,20 @@
+{
+  "heading": ["Stop staring at the wall.", "Just flip the first task"],
+  "subheading": "Fleent syncs with your calendar to find your next gap, picks 3 easy wins, and breaks them into 10-second physical steps. No noise, just momentum.",
+  "ctas": [
+    { "label": "Try for free", "href": "/signup", "variant": "orange" },
+    { "label": "See demo", "href": "/demo", "variant": "white" }
+  ],
+  "image": {
+    "src": "/images/Fleentherocards.svg",
+    "alt": "Fleent task cards fanned out — a difficulty selector, a checklist, and a weekly taskboard.",
+    "width": 1050,
+    "height": 518
+  },
+  "imageMobile": {
+    "src": "/images/fleent-mobile.svg",
+    "alt": "Fleent task cards stacked for mobile — difficulty selector, checklist, and weekly taskboard.",
+    "width": 613,
+    "height": 531
+  }
+}

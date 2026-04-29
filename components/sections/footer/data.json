@@ -1,0 +1,58 @@
+{
+  "tagline": "Momentum, not mountains.",
+  "demo": {
+    "headline": "One last thing — try a flip.",
+    "subheading": "Type something you've been avoiding. We'll turn it into a 10-second start.",
+    "placeholder": "write the report, call mom, fix the bug…",
+    "buttonLabel": "Flip it",
+    "resetLabel": "Try another",
+    "resultPrefix": "Right now, just",
+    "suggestions": [
+      "open the document and read the first sentence.",
+      "write one sentence — even a bad one.",
+      "stand up and walk to your desk.",
+      "set a 2-minute timer and start.",
+      "take three deep breaths and re-read the brief.",
+      "pull up the file. Put your cursor at the top.",
+      "type the title. That's it. Just the title.",
+      "say it out loud, once.",
+      "fill your water bottle, then come back.",
+      "open one tab. Close the other twelve."
+    ]
+  },
+  "columns": [
+    {
+      "title": "Product",
+      "links": [
+        { "label": "Features", "href": "/features" },
+        { "label": "Pricing", "href": "/pricing" },
+        { "label": "Demo", "href": "/demo" },
+        { "label": "Changelog", "href": "/changelog" }
+      ]
+    },
+    {
+      "title": "Company",
+      "links": [
+        { "label": "About", "href": "/about" },
+        { "label": "Blog", "href": "/blog" },
+        { "label": "Careers", "href": "/careers" },
+        { "label": "Contact", "href": "/contact" }
+      ]
+    },
+    {
+      "title": "Resources",
+      "links": [
+        { "label": "Help center", "href": "/help" },
+        { "label": "Privacy", "href": "/privacy" },
+        { "label": "Terms", "href": "/terms" },
+        { "label": "Status", "href": "/status" }
+      ]
+    }
+  ],
+  "social": [
+    { "label": "X", "icon": "XLogo", "href": "https://x.com/fleent" },
+    { "label": "LinkedIn", "icon": "LinkedinLogo", "href": "https://linkedin.com/company/fleent" },
+    { "label": "GitHub", "icon": "GithubLogo", "href": "https://github.com/fleent" }
+  ],
+  "copyright": "© 2026 Fleent. Built for brains that dance differently."
+}

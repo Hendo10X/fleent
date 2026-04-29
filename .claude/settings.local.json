@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bun --version)",
+      "Read(//c/Users/Hendo/Documents/**)",
+      "Bash(mv fleent *)",
+      "Bash(mv fleent_outer_tmp/fleent fleent)",
+      "Bash(rmdir fleent_outer_tmp)",
+      "Bash(shopt -s dotglob)",
+      "Bash(mv fleent/* .)",
+      "Bash(shopt -u dotglob)",
+      "Bash(bun run *)",
+      "WebFetch(domain:www.raphaelsalaja.com)",
+      "Bash(bun add *)",
+      "Bash(python3 -c ' *)",
+      "Bash(identify /c/Users/Hendo/Documents/fleent/public/images/Fleent-dumpthenoise.svg)",
+      "Bash(node -e ' *)"
+    ]
+  }
+}

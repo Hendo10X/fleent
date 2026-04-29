@@ -1,0 +1,31 @@
+{
+  "heading": "Frequently asked questions",
+  "subheading": "Quick answers to common questions about pricing, privacy, setup, and more.",
+  "items": [
+    {
+      "id": "todo-list",
+      "question": "How is this different from a regular to-do list?",
+      "answer": "Regular to-do lists let you write down everything you should do, then leave you alone with the overwhelm. Fleent caps the visible list at three tasks, ranks them by how easy they are to start right now, and breaks each one into a 10-second physical action. You don't pick — you just move."
+    },
+    {
+      "id": "easy-task",
+      "question": "What if I can't even start the \"easy\" task?",
+      "answer": "Tap the Flip button. The AI re-frames the task into something even smaller — usually a single physical motion you can do in under ten seconds. If that's still too much, Flip again. There's no minimum unit; momentum matters more than the size of the win."
+    },
+    {
+      "id": "pricing",
+      "question": "How much does Fleent cost?",
+      "answer": "Free to use for the core 3-task flow forever. The Pro plan adds calendar gap detection, voice brain-dump, and longer streak history for $6/month — billed yearly or monthly, cancel anytime."
+    },
+    {
+      "id": "calendar-sync",
+      "question": "How does the Calendar Sync work?",
+      "answer": "Connect Google or Outlook in one tap. Fleent reads your event blocks (never your event content) and finds the open windows between meetings. It then nominates tasks that actually fit those gaps — a 12-minute window won't get an hour-long deep-work suggestion."
+    },
+    {
+      "id": "training-data",
+      "question": "Is my data used to train the AI?",
+      "answer": "No. Your tasks, dumps, and calendar metadata are used only to power your own dashboard. Nothing leaves your account to train models, and we don't sell or share it. You can export or delete everything from Settings whenever you want."
+    }
+  ]
+}

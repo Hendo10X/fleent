@@ -1,0 +1,48 @@
+{
+  "logo": {
+    "label": "FLEENT",
+    "href": "/"
+  },
+  "links": [
+    {
+      "label": "Features",
+      "items": [
+        {
+          "label": "Focus Mode",
+          "description": "Three tasks. One screen. Zero noise.",
+          "href": "/features/focus",
+          "icon": "Target",
+          "color": "orange"
+        },
+        {
+          "label": "Smart Capture",
+          "description": "Drop a thought, sort it later.",
+          "href": "/features/capture",
+          "icon": "Lightbulb",
+          "color": "blue"
+        },
+        {
+          "label": "Daily Rhythm",
+          "description": "Plans that match your energy.",
+          "href": "/features/rhythm",
+          "icon": "Waveform",
+          "color": "green"
+        },
+        {
+          "label": "Gentle Reminders",
+          "description": "Nudges, never alarms.",
+          "href": "/features/reminders",
+          "icon": "BellSimple",
+          "color": "blue"
+        }
+      ]
+    },
+    { "label": "Pricing", "href": "/pricing" },
+    { "label": "Blog", "href": "/blog" },
+    { "label": "About", "href": "/about" }
+  ],
+  "actions": {
+    "login": { "label": "Login", "href": "/login" },
+    "register": { "label": "Register", "href": "/register" }
+  }
+}

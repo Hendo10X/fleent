@@ -1,0 +1,8 @@
+{
+  "heading": ["Stop fighting your brain.", "Start working with it."],
+  "subheading": "Join the thousands of thinkers who have traded the \"Wall of Awful\" for a simple flip. Fleent is free to start and designed to get out of your way.",
+  "ctas": [
+    { "label": "Join now", "href": "/signup", "variant": "white" },
+    { "label": "See demo", "href": "/demo", "variant": "outline" }
+  ]
+}
