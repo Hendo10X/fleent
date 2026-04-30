@@ -1,9 +1,10 @@
 import { Plus_Jakarta_Sans } from "next/font/google"
 
 import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
 import { LenisProvider } from "@/components/lenis-provider"
 import { cn } from "@/lib/utils";
+import { CookiePop } from "@/components/cookie-pop";
+import { Toaster } from "@/components/ui/sonner";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -22,9 +23,11 @@ export default function RootLayout({
       className={cn("antialiased", plusJakartaSans.variable, "font-sans")}
     >
       <body>
-        <ThemeProvider>
-          <LenisProvider>{children}</LenisProvider>
-        </ThemeProvider>
+        <LenisProvider>
+          {children}
+          <CookiePop />
+          <Toaster />
+        </LenisProvider>
       </body>
     </html>
   )
