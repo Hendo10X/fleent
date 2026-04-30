@@ -174,7 +174,7 @@ export default function PricingPage() {
 
             <div className="overflow-hidden rounded-3xl bg-white">
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[820px] border-collapse">
+                <table className="w-full min-w-205 border-collapse">
                   <caption className="sr-only">
                     Feature module comparison across Free, Pro, and Team plans
                   </caption>
