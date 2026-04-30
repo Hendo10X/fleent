@@ -11,10 +11,12 @@ export type InputProps = Omit<
   size?: "sm" | "default" | "lg" | number;
   unstyled?: boolean;
   nativeInput?: boolean;
+  inputClassName?: string;
 };
 
 export function Input({
   className,
+  inputClassName: innerClassName,
   size = "default",
   unstyled = false,
   nativeInput = false,
@@ -30,6 +32,7 @@ export function Input({
       "[&::-webkit-search-cancel-button]:appearance-none [&::-webkit-search-decoration]:appearance-none [&::-webkit-search-results-button]:appearance-none [&::-webkit-search-results-decoration]:appearance-none",
     props.type === "file" &&
       "text-muted-foreground file:me-3 file:bg-transparent file:font-medium file:text-foreground file:text-sm",
+    innerClassName,
   );
 
   return (
