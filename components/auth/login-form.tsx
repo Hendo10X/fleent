@@ -82,14 +82,14 @@ export function LoginForm() {
               size="lg"
               aria-invalid={Boolean(errors.password)}
               className="bg-white"
-              inputClassName="pr-10"
+              inputClassName="pr-12"
               {...register("password")}
             />
             <button
               type="button"
               aria-label={showPassword ? "Hide password" : "Show password"}
               onClick={() => setShowPassword((value) => !value)}
-              className="absolute top-1/2 right-2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-fleent-mute transition-colors duration-200 ease-out hover:bg-[#F3F3F3] hover:text-fleent-ink"
+              className="absolute inset-y-0 right-1 my-1 inline-flex w-8 items-center justify-center rounded-full text-fleent-mute transition-colors duration-200 ease-out hover:bg-[#F3F3F3] hover:text-fleent-ink"
             >
               {showPassword ? (
                 <EyeSlash size={17} weight="regular" />

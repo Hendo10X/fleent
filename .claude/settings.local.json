@@ -14,7 +14,9 @@
       "Bash(bun add *)",
       "Bash(python3 -c ' *)",
       "Bash(identify /c/Users/Hendo/Documents/fleent/public/images/Fleent-dumpthenoise.svg)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(yes)",
+      "Bash(bunx motion-primitives@latest add dock)"
     ]
   }
 }

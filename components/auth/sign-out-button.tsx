@@ -5,14 +5,21 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
 
-export function SignOutButton() {
+export function SignOutButton({
+  className,
+}: {
+  className?: string;
+}) {
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   return (
     <Button
       loading={isSigningOut}
-      className="rounded-full border-transparent bg-white text-fleent-ink shadow-none hover:bg-[#F3F3F3] *:data-[slot=button-loading-indicator]:text-fleent-orange"
+      className={
+        className ??
+        "rounded-full border-transparent bg-white text-fleent-ink shadow-none hover:bg-[#F3F3F3] *:data-[slot=button-loading-indicator]:text-fleent-orange"
+      }
       onClick={async () => {
         setIsSigningOut(true);
         await authClient.signOut();
