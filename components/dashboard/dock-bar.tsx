@@ -10,6 +10,7 @@ import {
   MotionConfig,
 } from "motion/react";
 import useMeasure from "react-use-measure";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ChartBar,
   DotsThreeOutline,
@@ -23,6 +24,10 @@ import {
 } from "@phosphor-icons/react";
 import useClickOutside from "@/hooks/useClickOutside";
 import { createTask } from "@/app/dashboard/actions";
+import {
+  type DashboardTask,
+  dashboardTasksQueryKey,
+} from "@/lib/dashboard-tasks";
 
 type DockEntry = {
   id: string;
@@ -302,32 +307,72 @@ function AddTaskForm({ onDone }: { onDone: () => void }) {
   const [tag, setTag] = useState("");
   const [difficulty, setDifficulty] = useState<number | null>(null);
   const [firstAction, setFirstAction] = useState("");
-  const [submitting, setSubmitting] = useState(false);
   const titleRef = useRef<HTMLInputElement | null>(null);
+  const router = useRouter();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     titleRef.current?.focus();
   }, []);
 
+  type CreateInput = {
+    id: string;
+    title: string;
+    taskType?: string;
+    difficulty?: number;
+    firstAction?: string;
+  };
+
+  const createMutation = useMutation({
+    mutationKey: ["dashboard", "tasks", "create"],
+    mutationFn: (input: CreateInput) => createTask(input),
+    onMutate: (input) => {
+      const prev =
+        queryClient.getQueryData<DashboardTask[]>(dashboardTasksQueryKey) ??
+        [];
+      const optimistic: DashboardTask = {
+        id: input.id,
+        title: input.title.trim(),
+        taskType: input.taskType?.trim() || null,
+        difficulty: input.difficulty ?? null,
+        firstAction: input.firstAction?.trim() || null,
+        status: "active",
+      };
+      // Active items first (sorted by status asc), so new task goes at the
+      // top of the active group, matching the server ordering.
+      queryClient.setQueryData<DashboardTask[]>(
+        dashboardTasksQueryKey,
+        [optimistic, ...prev],
+      );
+      return { prev };
+    },
+    onError: (_err, _input, ctx) => {
+      if (ctx?.prev)
+        queryClient.setQueryData(dashboardTasksQueryKey, ctx.prev);
+    },
+    onSettled: () => router.refresh(),
+  });
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim() || submitting) return;
-    setSubmitting(true);
-    try {
-      await createTask({
-        title,
-        taskType: tag || undefined,
-        difficulty: difficulty ?? undefined,
-        firstAction: firstAction || undefined,
-      });
-      setTitle("");
-      setTag("");
-      setDifficulty(null);
-      setFirstAction("");
-      onDone();
-    } finally {
-      setSubmitting(false);
-    }
+    if (!title.trim() || createMutation.isPending) return;
+    const id =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const payload = {
+      id,
+      title,
+      taskType: tag || undefined,
+      difficulty: difficulty ?? undefined,
+      firstAction: firstAction || undefined,
+    };
+    setTitle("");
+    setTag("");
+    setDifficulty(null);
+    setFirstAction("");
+    onDone();
+    createMutation.mutate(payload);
   }
 
   return (
@@ -361,10 +406,10 @@ function AddTaskForm({ onDone }: { onDone: () => void }) {
       <div className="mt-1 flex justify-end">
         <button
           type="submit"
-          disabled={!title.trim() || submitting}
+          disabled={!title.trim()}
           className="inline-flex h-9 items-center justify-center rounded-full bg-fleent-orange px-4 text-sm font-semibold tracking-wide text-white transition-colors duration-200 ease-out hover:bg-fleent-orange/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {submitting ? "Adding…" : "Add task"}
+          Add task
         </button>
       </div>
     </form>

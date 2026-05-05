@@ -8,6 +8,7 @@ import { streakEvents, streaks, tasks } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
 type CreateTaskInput = {
+  id?: string;
   title: string;
   taskType?: string;
   difficulty?: number;
@@ -21,8 +22,10 @@ export async function createTask(input: CreateTaskInput) {
   const title = input.title.trim();
   if (!title) throw new Error("Task title is required.");
 
+  const id = input.id ?? crypto.randomUUID();
+
   await db.insert(tasks).values({
-    id: crypto.randomUUID(),
+    id,
     userId: session.user.id,
     title,
     taskType: input.taskType?.trim() || null,
@@ -35,6 +38,7 @@ export async function createTask(input: CreateTaskInput) {
   });
 
   revalidatePath("/dashboard");
+  return { id };
 }
 
 export async function toggleTaskComplete(id: string) {

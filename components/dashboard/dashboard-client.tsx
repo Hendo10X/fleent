@@ -1,7 +1,14 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import {
+  useIsMutating,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { CaretDown, Plus, Trash } from "@phosphor-icons/react";
 import {
   Empty,
@@ -16,25 +23,20 @@ import {
   toggleTaskComplete,
 } from "@/app/dashboard/actions";
 import { StreakChip } from "@/components/dashboard/streak-widgets";
-
-type Task = {
-  id: string;
-  title: string;
-  taskType: string | null;
-  difficulty: number | null;
-  firstAction: string | null;
-  status: "active" | "completed";
-};
+import {
+  type DashboardTask,
+  dashboardTasksQueryKey,
+} from "@/lib/dashboard-tasks";
 
 type Props = {
   user: { name: string; image: string | null };
-  tasks: Task[];
+  tasks: DashboardTask[];
   completedInLast4Weeks: number;
   currentStreak: number;
 };
 
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
-const SPRING = { type: "spring" as const, bounce: 0.18, duration: 0.45 };
+const SPRING = { type: "spring" as const, bounce: 0.2, duration: 0.35 };
 
 export function DashboardClient({
   user,
@@ -42,14 +44,38 @@ export function DashboardClient({
   completedInLast4Weeks,
   currentStreak,
 }: Props) {
-  const activeTasks = tasks.filter((t) => t.status === "active");
+  const queryClient = useQueryClient();
+
+  const { data: liveTasks = tasks } = useQuery<DashboardTask[]>({
+    queryKey: dashboardTasksQueryKey,
+    queryFn: () =>
+      (queryClient.getQueryData<DashboardTask[]>(dashboardTasksQueryKey) ??
+        tasks),
+    initialData: tasks,
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+
+  // Reconcile cache when the server sends fresh data (after revalidatePath).
+  // We hold off if any task mutation is still pending, so optimistic state
+  // (e.g. a second add while the first is still in-flight) isn't clobbered.
+  const pendingMutations = useIsMutating({ mutationKey: ["dashboard", "tasks"] });
+  const pendingRef = useRef(pendingMutations);
+  pendingRef.current = pendingMutations;
+  useEffect(() => {
+    if (pendingRef.current === 0) {
+      queryClient.setQueryData<DashboardTask[]>(dashboardTasksQueryKey, tasks);
+    }
+  }, [tasks, queryClient]);
+
+  const activeTasks = liveTasks.filter((t) => t.status === "active");
   const activeCount = activeTasks.length;
 
-  const topThree = tasks.slice(0, 3);
-  const queued = tasks.slice(3);
+  const topThree = liveTasks.slice(0, 3);
+  const queued = liveTasks.slice(3);
 
   const dateLabel = formatDateLabel(new Date());
-  const isEmpty = tasks.length === 0;
+  const isEmpty = liveTasks.length === 0;
 
   return (
     <main className="px-6 pt-12">
@@ -96,8 +122,8 @@ function TaskList({
   queued,
   queuedActiveCount,
 }: {
-  topThree: Task[];
-  queued: Task[];
+  topThree: DashboardTask[];
+  queued: DashboardTask[];
   queuedActiveCount: number;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -106,9 +132,11 @@ function TaskList({
   return (
     <div className="mt-10 flex w-full flex-col">
       <ul className="flex w-full flex-col gap-1.5">
-        {topThree.map((task) => (
-          <TaskRow key={task.id} task={task} />
-        ))}
+        <AnimatePresence initial={false} mode="popLayout">
+          {topThree.map((task) => (
+            <TaskRow key={task.id} task={task} />
+          ))}
+        </AnimatePresence>
       </ul>
 
       <AnimatePresence initial={false}>
@@ -125,9 +153,11 @@ function TaskList({
             className="overflow-hidden"
           >
             <div className="flex flex-col gap-1.5 pt-1.5">
-              {queued.map((task) => (
-                <TaskRow key={task.id} task={task} />
-              ))}
+              <AnimatePresence initial={false} mode="popLayout">
+                {queued.map((task) => (
+                  <TaskRow key={task.id} task={task} />
+                ))}
+              </AnimatePresence>
             </div>
           </motion.ul>
         )}
@@ -177,63 +207,125 @@ function EmptyState() {
   );
 }
 
-function TaskRow({ task }: { task: Task }) {
-  const [isPending, startTransition] = useTransition();
-  const [isDeleting, startDeleting] = useTransition();
+function TaskRow({ task }: { task: DashboardTask }) {
+  const queryClient = useQueryClient();
+  const router = useRouter();
   const completed = task.status === "completed";
+
+  const toggleMutation = useMutation({
+    mutationKey: ["dashboard", "tasks", "toggle", task.id],
+    mutationFn: () => toggleTaskComplete(task.id),
+    onMutate: () => {
+      const prev =
+        queryClient.getQueryData<DashboardTask[]>(dashboardTasksQueryKey) ??
+        [];
+      queryClient.setQueryData<DashboardTask[]>(
+        dashboardTasksQueryKey,
+        prev.map((t) =>
+          t.id === task.id
+            ? {
+                ...t,
+                status:
+                  t.status === "completed"
+                    ? ("active" as const)
+                    : ("completed" as const),
+              }
+            : t,
+        ),
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev)
+        queryClient.setQueryData(dashboardTasksQueryKey, ctx.prev);
+    },
+    onSettled: () => router.refresh(),
+  });
+
+  const deleteMutation = useMutation({
+    mutationKey: ["dashboard", "tasks", "delete", task.id],
+    mutationFn: () => deleteTask(task.id),
+    onMutate: () => {
+      const prev =
+        queryClient.getQueryData<DashboardTask[]>(dashboardTasksQueryKey) ??
+        [];
+      queryClient.setQueryData<DashboardTask[]>(
+        dashboardTasksQueryKey,
+        prev.filter((t) => t.id !== task.id),
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev)
+        queryClient.setQueryData(dashboardTasksQueryKey, ctx.prev);
+    },
+    onSettled: () => router.refresh(),
+  });
 
   return (
     <motion.li
       layout
-      transition={SPRING}
-      className="group flex items-center gap-2 rounded-xl px-2 py-2 transition-colors duration-200 ease-out hover:bg-white"
+      initial={{ opacity: 0, y: -6, scale: 0.985 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{
+        opacity: 0,
+        x: 24,
+        scale: 0.96,
+        height: 0,
+        marginTop: 0,
+        marginBottom: 0,
+        paddingTop: 0,
+        paddingBottom: 0,
+      }}
+      transition={{ ...SPRING, opacity: { duration: 0.18, ease: EASE_OUT } }}
+      className="group flex items-center gap-2 overflow-hidden rounded-xl px-2 py-2 transition-colors duration-200 ease-out hover:bg-white"
     >
       <button
         type="button"
-        disabled={isPending || isDeleting}
-        onClick={() =>
-          startTransition(async () => {
-            await toggleTaskComplete(task.id);
-          })
-        }
+        onClick={() => toggleMutation.mutate()}
         aria-label={completed ? "Mark task active" : "Mark task complete"}
         className="flex flex-1 items-center gap-3 text-left"
       >
-        <span
-          className={`inline-flex size-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors duration-200 ease-out ${
-            completed
-              ? "border-fleent-orange bg-fleent-orange"
-              : "border-fleent-ink/40 group-hover:border-fleent-ink"
-          }`}
+        <motion.span
+          aria-hidden
+          animate={{
+            backgroundColor: completed ? "#FF5A1F" : "rgba(0,0,0,0)",
+            borderColor: completed
+              ? "#FF5A1F"
+              : "rgba(0,0,0,0.4)",
+          }}
+          transition={{ duration: 0.18, ease: EASE_OUT }}
+          whileTap={{ scale: 0.85 }}
+          className="inline-flex size-5 shrink-0 items-center justify-center rounded-md border-2"
         >
-          {completed && (
-            <motion.svg
-              initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 1 }}
-              transition={{ duration: 0.25, ease: EASE_OUT }}
-              viewBox="0 0 12 12"
-              className="size-3 text-white"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <motion.path d="M2.5 6.5L5 9L9.5 3.5" />
-            </motion.svg>
-          )}
-        </span>
+          <AnimatePresence initial={false}>
+            {completed && (
+              <motion.svg
+                key="check"
+                initial={{ pathLength: 0, opacity: 0, scale: 0.7 }}
+                animate={{ pathLength: 1, opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.7 }}
+                transition={{ duration: 0.22, ease: EASE_OUT }}
+                viewBox="0 0 12 12"
+                className="size-3 text-white"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <motion.path d="M2.5 6.5L5 9L9.5 3.5" />
+              </motion.svg>
+            )}
+          </AnimatePresence>
+        </motion.span>
         <StrikeText text={task.title} completed={completed} />
       </button>
 
       <button
         type="button"
-        disabled={isDeleting}
-        onClick={() =>
-          startDeleting(async () => {
-            await deleteTask(task.id);
-          })
-        }
+        disabled={deleteMutation.isPending}
+        onClick={() => deleteMutation.mutate()}
         aria-label="Delete task"
         className="ml-1 inline-flex size-7 shrink-0 items-center justify-center rounded-full text-fleent-mute opacity-0 transition-all duration-200 ease-out hover:bg-[#F3F3F3] hover:text-fleent-ink group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-50"
       >
@@ -245,10 +337,10 @@ function TaskRow({ task }: { task: Task }) {
 
 function StrikeText({ text, completed }: { text: string; completed: boolean }) {
   return (
-    <span className="relative inline-block">
+    <span className="relative inline-block leading-tight">
       <motion.span
         animate={{ color: completed ? "#828181" : "#000000" }}
-        transition={{ duration: 0.3, ease: EASE_OUT, delay: completed ? 0.15 : 0 }}
+        transition={{ duration: 0.18, ease: EASE_OUT }}
         className="text-sm font-medium tracking-wide"
       >
         {text}
@@ -257,9 +349,9 @@ function StrikeText({ text, completed }: { text: string; completed: boolean }) {
         aria-hidden
         initial={false}
         animate={{ scaleX: completed ? 1 : 0 }}
-        transition={{ duration: 0.4, ease: EASE_OUT }}
+        transition={{ duration: 0.22, ease: EASE_OUT }}
         style={{ transformOrigin: completed ? "left center" : "right center" }}
-        className="pointer-events-none absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-fleent-mute/60"
+        className="pointer-events-none absolute inset-x-0 top-[55%] h-[1.5px] -translate-y-1/2 rounded-full bg-fleent-ink/55"
       />
     </span>
   );
