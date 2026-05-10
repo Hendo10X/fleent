@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { CaretDown, Plus, Trash } from "@phosphor-icons/react";
+import { AutoStackButton } from "@/components/dashboard/auto-stack-button";
 import {
   Empty,
   EmptyContent,
@@ -87,17 +88,22 @@ export function DashboardClient({
             </h1>
             <StreakChip count={currentStreak} />
           </div>
-          <div className="flex flex-col items-start">
-            <p className="text-base font-semibold tracking-tight text-fleent-ink">
+          <div className="flex w-full flex-col items-start text-left">
+            <p className="self-start text-left text-base font-semibold tracking-tight text-fleent-ink">
               {dateLabel}
             </p>
-            <p className="mt-1 text-sm tracking-wide text-fleent-ink">
+            <p className="mt-1 self-start text-left text-sm tracking-wide text-fleent-ink">
               {completedInLast4Weeks} task
               {completedInLast4Weeks === 1 ? "" : "s"} completed in 4 weeks
             </p>
-            <p className="text-sm tracking-wide text-fleent-mute">
+            <p className="self-start text-left text-sm tracking-wide text-fleent-mute">
               {activeCount} pending task{activeCount === 1 ? "" : "s"}
             </p>
+            {liveTasks.length > 0 && (
+              <div className="mt-3 self-start">
+                <AutoStackButton tasks={liveTasks} />
+              </div>
+            )}
           </div>
         </div>
 
