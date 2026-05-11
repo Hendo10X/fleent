@@ -12,6 +12,10 @@ const nextConfig = {
         hostname: "ufs.sh",
         pathname: "/f/**",
       },
+      {
+        protocol: "https",
+        hostname: "lh3.googleusercontent.com",
+      },
     ],
   },
 }

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/Hendo/Documents/fleent/**)",
+      "Bash(bun add *)",
+      "Bash(rm -rf .next)",
+      "Bash(bun run *)"
+    ]
+  }
+}

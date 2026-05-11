@@ -10,19 +10,27 @@ import {
   MotionConfig,
 } from "motion/react";
 import useMeasure from "react-use-measure";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ChartBar,
   DotsThreeOutline,
   Gear,
   House,
   type Icon,
+  MagicWand,
   Notepad,
   Plus,
   Sparkle,
   Timer,
 } from "@phosphor-icons/react";
+import { toast } from "sonner";
 import useClickOutside from "@/hooks/useClickOutside";
-import { createTask } from "@/app/dashboard/actions";
+import { createTask, createTaskWithBreakdown } from "@/app/dashboard/actions";
+import {
+  type DashboardTask,
+  dashboardTasksQueryKey,
+} from "@/lib/dashboard-tasks";
+import { TaskBreakdownPanel } from "@/components/dashboard/task-breakdown-panel";
 
 type DockEntry = {
   id: string;
@@ -68,8 +76,12 @@ export function DockBar({ user }: Props) {
 
   // Close panels on route change
   useEffect(() => {
-    setPanelOpen(false);
-    setMoreOpen(false);
+    const timer = window.setTimeout(() => {
+      setPanelOpen(false);
+      setMoreOpen(false);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [pathname]);
 
   const overflowItems = DOCK_ITEMS.filter((item) => !item.mobilePrimary);
@@ -133,8 +145,8 @@ export function DockBar({ user }: Props) {
                       }}
                       whileTap={{ scale: 0.97 }}
                       transition={FAST}
-                      className={`relative size-10 shrink-0 items-center justify-center rounded-[1.05rem] outline-none focus-visible:ring-2 focus-visible:ring-fleent-orange/40 sm:size-11 sm:rounded-[1.15rem] ${
-                        item.mobilePrimary ? "inline-flex" : "hidden sm:inline-flex"
+                      className={`relative inline-flex size-10 shrink-0 items-center justify-center rounded-[1.05rem] outline-none focus-visible:ring-2 focus-visible:ring-fleent-orange/40 sm:size-11 sm:rounded-[1.15rem] ${
+                        item.mobilePrimary ? "" : "max-sm:hidden"
                       }`}
                     >
                       {showPill && (
@@ -302,33 +314,166 @@ function AddTaskForm({ onDone }: { onDone: () => void }) {
   const [tag, setTag] = useState("");
   const [difficulty, setDifficulty] = useState<number | null>(null);
   const [firstAction, setFirstAction] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
   const titleRef = useRef<HTMLInputElement | null>(null);
+  const router = useRouter();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     titleRef.current?.focus();
   }, []);
 
+  function resetForm() {
+    setTitle("");
+    setTag("");
+    setDifficulty(null);
+    setFirstAction("");
+    setBreakdownOpen(false);
+  }
+
+  type CreateInput = {
+    id: string;
+    title: string;
+    taskType?: string;
+    difficulty?: number;
+    firstAction?: string;
+  };
+
+  const createMutation = useMutation({
+    mutationKey: ["dashboard", "tasks", "create"],
+    mutationFn: (input: CreateInput) => createTask(input),
+    onMutate: (input) => {
+      const prev =
+        queryClient.getQueryData<DashboardTask[]>(dashboardTasksQueryKey) ??
+        [];
+      const optimistic: DashboardTask = {
+        id: input.id,
+        title: input.title.trim(),
+        taskType: input.taskType?.trim() || null,
+        difficulty: input.difficulty ?? null,
+        firstAction: input.firstAction?.trim() || null,
+        status: "active",
+        sortOrder: 0,
+        parentId: null,
+      };
+      // Active items first (sorted by status asc), so new task goes at the
+      // top of the active group, matching the server ordering.
+      queryClient.setQueryData<DashboardTask[]>(
+        dashboardTasksQueryKey,
+        [optimistic, ...prev],
+      );
+      return { prev };
+    },
+    onError: (_err, _input, ctx) => {
+      if (ctx?.prev)
+        queryClient.setQueryData(dashboardTasksQueryKey, ctx.prev);
+    },
+    onSettled: () => router.refresh(),
+  });
+
+  /**
+   * Persist a parent task + its AI breakdown children in one round-trip.
+   * Ids are minted client-side so the optimistic list and the server INSERT
+   * share identity — no flicker on reconcile.
+   */
+  type BreakdownCreateInput = {
+    parent: { id: string; title: string };
+    children: Array<{ id: string; title: string }>;
+    shared: { taskType?: string; difficulty?: number };
+  };
+
+  const breakdownCreateMutation = useMutation({
+    mutationKey: ["dashboard", "tasks", "create-with-breakdown"],
+    mutationFn: (input: BreakdownCreateInput) =>
+      createTaskWithBreakdown({
+        parent: input.parent,
+        steps: input.children,
+        shared: input.shared,
+      }),
+    onMutate: ({ parent, children, shared }) => {
+      const prev =
+        queryClient.getQueryData<DashboardTask[]>(dashboardTasksQueryKey) ??
+        [];
+      const parentRow: DashboardTask = {
+        id: parent.id,
+        title: parent.title,
+        taskType: shared.taskType?.trim() || null,
+        difficulty: shared.difficulty ?? null,
+        firstAction: null,
+        status: "active",
+        sortOrder: 0,
+        parentId: null,
+      };
+      const childRows: DashboardTask[] = children.map((c) => ({
+        id: c.id,
+        title: c.title,
+        taskType: shared.taskType?.trim() || null,
+        difficulty: shared.difficulty ?? null,
+        firstAction: null,
+        status: "active",
+        sortOrder: 0,
+        parentId: parent.id,
+      }));
+      queryClient.setQueryData<DashboardTask[]>(
+        dashboardTasksQueryKey,
+        [parentRow, ...childRows, ...prev],
+      );
+      return { prev };
+    },
+    onError: (err, _input, ctx) => {
+      if (ctx?.prev)
+        queryClient.setQueryData(dashboardTasksQueryKey, ctx.prev);
+      const message =
+        err instanceof Error ? err.message : "Couldn't add those tasks.";
+      toast.error(message);
+    },
+    onSettled: () => router.refresh(),
+  });
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim() || submitting) return;
-    setSubmitting(true);
-    try {
-      await createTask({
-        title,
-        taskType: tag || undefined,
-        difficulty: difficulty ?? undefined,
-        firstAction: firstAction || undefined,
-      });
-      setTitle("");
-      setTag("");
-      setDifficulty(null);
-      setFirstAction("");
-      onDone();
-    } finally {
-      setSubmitting(false);
-    }
+    if (!title.trim() || createMutation.isPending) return;
+    const id =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : `tmp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const payload = {
+      id,
+      title,
+      taskType: tag || undefined,
+      difficulty: difficulty ?? undefined,
+      firstAction: firstAction || undefined,
+    };
+    resetForm();
+    onDone();
+    createMutation.mutate(payload);
   }
+
+  function handleApplyBreakdown(steps: string[]) {
+    const cleaned = steps.map((s) => s.trim()).filter(Boolean);
+    const parentTitle = title.trim();
+    if (cleaned.length === 0 || !parentTitle) return;
+
+    const parentId = crypto.randomUUID();
+    const children = cleaned.map((t) => ({
+      id: crypto.randomUUID(),
+      title: t,
+    }));
+    const shared = {
+      taskType: tag.trim() || undefined,
+      difficulty: difficulty ?? undefined,
+    };
+
+    resetForm();
+    onDone();
+    breakdownCreateMutation.mutate({
+      parent: { id: parentId, title: parentTitle },
+      children,
+      shared,
+    });
+  }
+
+  const canBreakdown = title.trim().length >= 2;
 
   return (
     <form onSubmit={handleSubmit} className="flex w-full flex-col gap-2.5">
@@ -358,13 +503,39 @@ function AddTaskForm({ onDone }: { onDone: () => void }) {
         className="w-full rounded-xl bg-[#F6F6FE] px-4 py-2.5 text-sm tracking-wide text-fleent-ink outline-none placeholder:text-fleent-mute focus-visible:ring-2 focus-visible:ring-fleent-orange/30"
       />
 
-      <div className="mt-1 flex justify-end">
+      {breakdownOpen && (
+        <TaskBreakdownPanel
+          title={title}
+          autoFetch
+          applyLabel="Add as tasks"
+          onApply={handleApplyBreakdown}
+          onClose={() => setBreakdownOpen(false)}
+          applyDisabled={breakdownCreateMutation.isPending}
+        />
+      )}
+
+      <div className="mt-1 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => setBreakdownOpen((v) => !v)}
+          disabled={!canBreakdown}
+          aria-pressed={breakdownOpen}
+          className={`inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-medium tracking-tight transition-colors duration-200 ease-out disabled:cursor-not-allowed disabled:opacity-50 ${
+            breakdownOpen
+              ? "bg-[#F3F3F3] text-fleent-ink"
+              : "text-fleent-mute hover:bg-[#F3F3F3] hover:text-fleent-ink"
+          }`}
+        >
+          <MagicWand size={14} weight="fill" className="text-fleent-orange" />
+          {breakdownOpen ? "Hide breakdown" : "Break it down"}
+        </button>
+
         <button
           type="submit"
-          disabled={!title.trim() || submitting}
+          disabled={!title.trim()}
           className="inline-flex h-9 items-center justify-center rounded-full bg-fleent-orange px-4 text-sm font-semibold tracking-wide text-white transition-colors duration-200 ease-out hover:bg-fleent-orange/90 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {submitting ? "Adding…" : "Add task"}
+          Add task
         </button>
       </div>
     </form>

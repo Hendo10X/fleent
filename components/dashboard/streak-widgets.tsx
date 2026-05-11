@@ -8,7 +8,7 @@ const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 
 const STREAK_ICON_SIZE = 18;
 const streakGlyphBoxClass =
-  "inline-flex size-7 shrink-0 items-center justify-center p-0 leading-none [&_svg]:block [&_svg]:h-[18px] [&_svg]:w-[18px] [&_svg]:shrink-0";
+  "inline-flex h-7 w-[18px] shrink-0 items-center justify-center p-0 leading-none [&_svg]:block [&_svg]:h-[18px] [&_svg]:w-[18px] [&_svg]:shrink-0";
 
 export function StreakChip({ count }: { count: number }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -19,7 +19,7 @@ export function StreakChip({ count }: { count: number }) {
     <div className="relative shrink-0">
       <div
         role="group"
-        className="inline-flex h-7 min-h-7 flex-nowrap items-center gap-1 rounded-full px-1.5 py-0 outline-none"
+        className="inline-flex h-7 min-h-7 flex-nowrap items-center gap-0 rounded-full py-0 outline-none"
       >
         <motion.button
           type="button"

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Eye, EyeSlash } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
@@ -15,6 +16,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/lib/auth-client";
 
 const signupSchema = z.object({
@@ -32,6 +34,7 @@ type SignupValues = z.infer<typeof signupSchema>;
 export function SignupForm() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const {
     register,
@@ -66,8 +69,21 @@ export function SignupForm() {
     }, 450);
   }
 
+  async function handleGoogleSignUp() {
+    setIsGoogleSubmitting(true);
+    const { error } = await authClient.signIn.social({
+      provider: "google",
+      callbackURL: "/onboarding",
+    });
+
+    if (error) {
+      setIsGoogleSubmitting(false);
+      toast.error(error.message ?? "Google sign-up failed.");
+    }
+  }
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
         <Field>
           <FieldLabel htmlFor="username">Username</FieldLabel>
           <Input
@@ -75,7 +91,7 @@ export function SignupForm() {
             type="text"
             autoComplete="username"
             placeholder="maverick"
-            size="lg"
+            size="default"
             aria-invalid={Boolean(errors.username)}
             className="bg-white"
             {...register("username")}
@@ -92,7 +108,7 @@ export function SignupForm() {
             type="email"
             autoComplete="email"
             placeholder="you@example.com"
-            size="lg"
+            size="default"
             aria-invalid={Boolean(errors.email)}
             className="bg-white"
             {...register("email")}
@@ -108,7 +124,7 @@ export function SignupForm() {
               type={showPassword ? "text" : "password"}
               autoComplete="new-password"
               placeholder="At least 8 characters"
-              size="lg"
+              size="default"
               aria-invalid={Boolean(errors.password)}
               className="bg-white"
               inputClassName="pr-12"
@@ -127,7 +143,7 @@ export function SignupForm() {
               )}
             </button>
           </div>
-          <FieldDescription>
+          <FieldDescription className="text-[11px] leading-4">
             Use at least 8 characters. Add a number or symbol for a stronger
             password.
           </FieldDescription>
@@ -139,11 +155,48 @@ export function SignupForm() {
         <Button
           type="submit"
           size="xl"
-          loading={isSubmitting}
-          className="mt-2 h-12 rounded-full border-transparent bg-fleent-orange text-white shadow-none hover:bg-fleent-orange/90"
+          disabled={isSubmitting}
+          className="mt-1 h-11 rounded-full border-transparent bg-fleent-orange text-white shadow-none hover:bg-fleent-orange/90"
         >
-          Create account
-          <ArrowRight size={16} weight="bold" />
+          {isSubmitting ? (
+            <Spinner className="size-4 text-white" />
+          ) : (
+            <>
+              Create account
+              <ArrowRight size={16} weight="bold" />
+            </>
+          )}
+        </Button>
+
+        <div className="flex items-center gap-2">
+          <span className="h-px flex-1 bg-black/8" />
+          <span className="text-xs font-semibold tracking-[0.12em] text-fleent-mute uppercase">
+            or
+          </span>
+          <span className="h-px flex-1 bg-black/8" />
+        </div>
+
+        <Button
+          type="button"
+          size="xl"
+          disabled={isGoogleSubmitting}
+          onClick={handleGoogleSignUp}
+          className="h-11 rounded-full border-transparent bg-white text-fleent-ink shadow-none hover:bg-[#F3F3F3]"
+        >
+          {isGoogleSubmitting ? (
+            <Spinner className="size-4 text-fleent-orange" />
+          ) : (
+            <>
+              <Image
+                src="/images/Google_Symbol_0.svg"
+                alt=""
+                width={18}
+                height={18}
+                aria-hidden
+              />
+              Continue with Google
+            </>
+          )}
         </Button>
     </form>
   );
