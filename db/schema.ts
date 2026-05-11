@@ -85,6 +85,14 @@ export const tasks = pgTable("tasks", {
   startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),
   sortOrder: integer("sort_order").default(0).notNull(),
+  /**
+   * Self-reference to the parent task when this row was produced by an AI
+   * breakdown. Null on standalone or top-level tasks.
+   *
+   * Deletion of a parent cascades to its children at the application layer
+   * (see `deleteTask` in `app/dashboard/actions.ts`).
+   */
+  parentId: text("parent_id"),
   createdAt: timestamp("created_at")
     .$defaultFn(() => new Date())
     .notNull(),

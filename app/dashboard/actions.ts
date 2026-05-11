@@ -2,12 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { and, asc, eq, sql } from "drizzle-orm";
-import { google } from "@ai-sdk/google";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { generateText } from "ai";
 import { db } from "@/db";
 import { streakEvents, streaks, tasks } from "@/db/schema";
 import { auth } from "@/lib/auth";
+import { aiModel } from "@/lib/ai/client";
+import { PRIORITIZE_SYSTEM, PRIORITIZE_USER } from "@/lib/ai/prompts";
+import { suggestBreakdown } from "@/lib/ai/breakdown";
+import { ensureTaskColumns } from "@/lib/db/migrations";
 
 type CreateTaskInput = {
   id?: string;
@@ -146,9 +149,18 @@ export async function deleteTask(id: string) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) throw new Error("Not signed in.");
 
+  await ensureTaskColumns();
+
+  // Single round-trip: delete the task and any breakdown children at once.
+  // We OR the predicates so Postgres handles cascade in one statement.
   await db
     .delete(tasks)
-    .where(and(eq(tasks.id, id), eq(tasks.userId, session.user.id)));
+    .where(
+      and(
+        eq(tasks.userId, session.user.id),
+        sql`(${tasks.id} = ${id} OR ${tasks.parentId} = ${id})`,
+      ),
+    );
 
   revalidatePath("/dashboard");
 }
@@ -157,9 +169,7 @@ export async function autoPrioritizeTasks() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) throw new Error("Not signed in.");
 
-  await db.execute(
-    sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS sort_order integer DEFAULT 0 NOT NULL`,
-  );
+  await ensureTaskColumns();
 
   const activeTasks = await db
     .select({ id: tasks.id, title: tasks.title, difficulty: tasks.difficulty, taskType: tasks.taskType })
@@ -171,18 +181,10 @@ export async function autoPrioritizeTasks() {
 
   if (activeTasks.length === 0) return [];
 
-  const prompt = `You are a task prioritization assistant. Rank these tasks by importance and urgency.
-
-Return a JSON array of objects with the original id and a priorityScore (1-100, higher = more important).
-Only return valid JSON, no explanation, no markdown.
-
-Tasks:
-${JSON.stringify(activeTasks, null, 2)}`;
-
   const { text } = await generateText({
-    model: google("gemini-2.0-flash"),
-    system: "You output only valid JSON arrays. No markdown, no explanation.",
-    prompt,
+    model: aiModel,
+    system: PRIORITIZE_SYSTEM,
+    prompt: PRIORITIZE_USER(activeTasks),
     temperature: 0.3,
   });
 
@@ -199,13 +201,158 @@ ${JSON.stringify(activeTasks, null, 2)}`;
     }))
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
-  for (let i = 0; i < updates.length; i++) {
-    await db
-      .update(tasks)
-      .set({ sortOrder: i + 1 })
-      .where(eq(tasks.id, updates[i].id));
-  }
+  // One SQL statement instead of N — `UPDATE … SET sort_order = CASE id WHEN
+  // … END WHERE id IN (…)`. Cuts the previous N round-trips down to one and
+  // scales linearly with payload, not with task count.
+  const ids = updates.map((u) => u.id);
+  const cases = sql.join(
+    updates.map((u, i) => sql`WHEN ${u.id} THEN ${i + 1}`),
+    sql` `,
+  );
+  await db
+    .update(tasks)
+    .set({ sortOrder: sql`CASE ${tasks.id} ${cases} END` })
+    .where(
+      and(eq(tasks.userId, session.user.id), inArray(tasks.id, ids)),
+    );
 
   revalidatePath("/dashboard");
   return updates.map((t, i) => ({ id: t.id, sortOrder: i + 1 }));
 }
+
+/**
+ * AI-powered breakdown of a single task title into 2–5 micro steps.
+ * Used by the Add-task form and by per-task breakdown on the dashboard.
+ *
+ * Returns only suggestions — the caller decides what to persist.
+ */
+export async function suggestTaskBreakdown(title: string): Promise<string[]> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) throw new Error("Not signed in.");
+
+  const cleaned = title.trim();
+  if (cleaned.length < 2) throw new Error("Give the task a bit more context.");
+
+  return suggestBreakdown(cleaned);
+}
+
+type BreakdownStep = { id: string; title: string };
+
+/**
+ * Attach AI-generated child steps to an existing task.
+ *
+ * The parent task is preserved — it becomes a collapsible container in the
+ * UI with the children as its breakdown. Children inherit the parent's
+ * taskType and difficulty.
+ *
+ * Accepts client-supplied child ids so the optimistic UI and the server
+ * agree on identity (prevents the "task flashes twice" reconcile glitch).
+ */
+export async function breakdownTask(
+  taskId: string,
+  steps: BreakdownStep[],
+): Promise<{ ids: string[] }> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) throw new Error("Not signed in.");
+
+  const cleaned = steps
+    .map((s) => ({ id: s.id, title: s.title.trim() }))
+    .filter((s) => s.id && s.title)
+    .slice(0, 5);
+  if (cleaned.length === 0) throw new Error("No steps to add.");
+
+  await ensureTaskColumns();
+
+  const [original] = await db
+    .select()
+    .from(tasks)
+    .where(and(eq(tasks.id, taskId), eq(tasks.userId, session.user.id)))
+    .limit(1);
+
+  if (!original) throw new Error("Task not found.");
+
+  const rows = cleaned.map((s) => ({
+    id: s.id,
+    userId: session.user.id,
+    title: s.title,
+    taskType: original.taskType,
+    difficulty: original.difficulty,
+    firstAction: null,
+    status: "active" as const,
+    parentId: original.id,
+  }));
+
+  await db.insert(tasks).values(rows);
+
+  revalidatePath("/dashboard");
+  return { ids: rows.map((r) => r.id) };
+}
+
+type CreateWithBreakdownInput = {
+  parent: { id: string; title: string };
+  steps: BreakdownStep[];
+  shared?: { taskType?: string; difficulty?: number };
+};
+
+/**
+ * Create a brand-new parent task plus its breakdown children in a single
+ * round-trip. Used by the Add-task form when the user accepts an AI
+ * breakdown before adding the task.
+ *
+ * All ids are client-supplied — keeps optimistic UI stable across the
+ * server round-trip.
+ */
+export async function createTaskWithBreakdown(
+  input: CreateWithBreakdownInput,
+): Promise<{ parentId: string; childIds: string[] }> {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) throw new Error("Not signed in.");
+
+  const parentTitle = input.parent.title.trim();
+  if (!parentTitle) throw new Error("Parent title required.");
+
+  const cleaned = input.steps
+    .map((s) => ({ id: s.id, title: s.title.trim() }))
+    .filter((s) => s.id && s.title)
+    .slice(0, 5);
+  if (cleaned.length === 0) throw new Error("No steps to add.");
+
+  await ensureTaskColumns();
+
+  const taskType = input.shared?.taskType?.trim() || null;
+  const difficulty =
+    typeof input.shared?.difficulty === "number" && input.shared.difficulty > 0
+      ? input.shared.difficulty
+      : null;
+
+  const parentRow = {
+    id: input.parent.id,
+    userId: session.user.id,
+    title: parentTitle,
+    taskType,
+    difficulty,
+    firstAction: null,
+    status: "active" as const,
+    parentId: null,
+  };
+
+  const childRows = cleaned.map((s) => ({
+    id: s.id,
+    userId: session.user.id,
+    title: s.title,
+    taskType,
+    difficulty,
+    firstAction: null,
+    status: "active" as const,
+    parentId: input.parent.id,
+  }));
+
+  await db.insert(tasks).values([parentRow, ...childRows]);
+
+  revalidatePath("/dashboard");
+  return {
+    parentId: parentRow.id,
+    childIds: childRows.map((r) => r.id),
+  };
+}
+

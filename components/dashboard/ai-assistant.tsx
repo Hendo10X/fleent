@@ -181,8 +181,10 @@ export function AIAssistant() {
         </AnimatePresence>
 
         {error ? (
-          <div className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm tracking-wide text-red-700">
-            {error.message || "The breakdown failed. Try again."}
+          <div className="mt-4 w-full max-w-full overflow-hidden rounded-2xl bg-red-50 px-4 py-3 text-sm tracking-wide text-red-700">
+            <p className="break-words whitespace-pre-wrap [overflow-wrap:anywhere]">
+              {error.message || "The breakdown failed. Try again."}
+            </p>
           </div>
         ) : null}
 

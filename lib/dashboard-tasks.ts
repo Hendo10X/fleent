@@ -6,6 +6,8 @@ export type DashboardTask = {
   firstAction: string | null;
   status: "active" | "completed";
   sortOrder: number;
+  /** Self-reference: id of the parent task when this row is a breakdown child. */
+  parentId: string | null;
 };
 
 export const dashboardTasksQueryKey = ["dashboard", "tasks"] as const;
