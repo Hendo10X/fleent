@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
+import { google } from "@ai-sdk/google";
+import { generateText } from "ai";
 import { db } from "@/db";
 import { streakEvents, streaks, tasks } from "@/db/schema";
 import { auth } from "@/lib/auth";
@@ -149,4 +151,61 @@ export async function deleteTask(id: string) {
     .where(and(eq(tasks.id, id), eq(tasks.userId, session.user.id)));
 
   revalidatePath("/dashboard");
+}
+
+export async function autoPrioritizeTasks() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) throw new Error("Not signed in.");
+
+  await db.execute(
+    sql`ALTER TABLE tasks ADD COLUMN IF NOT EXISTS sort_order integer DEFAULT 0 NOT NULL`,
+  );
+
+  const activeTasks = await db
+    .select({ id: tasks.id, title: tasks.title, difficulty: tasks.difficulty, taskType: tasks.taskType })
+    .from(tasks)
+    .where(
+      and(eq(tasks.userId, session.user.id), eq(tasks.status, "active")),
+    )
+    .orderBy(asc(tasks.createdAt));
+
+  if (activeTasks.length === 0) return [];
+
+  const prompt = `You are a task prioritization assistant. Rank these tasks by importance and urgency.
+
+Return a JSON array of objects with the original id and a priorityScore (1-100, higher = more important).
+Only return valid JSON, no explanation, no markdown.
+
+Tasks:
+${JSON.stringify(activeTasks, null, 2)}`;
+
+  const { text } = await generateText({
+    model: google("gemini-2.0-flash"),
+    system: "You output only valid JSON arrays. No markdown, no explanation.",
+    prompt,
+    temperature: 0.3,
+  });
+
+  const ranked: Array<{ id: string; priorityScore: number }> = JSON.parse(
+    text.replace(/```json|```/g, "").trim(),
+  );
+
+  const idIndex = new Map(ranked.map((r, i) => [r.id, i]));
+
+  const updates = activeTasks
+    .map((t) => ({
+      ...t,
+      sortOrder: idIndex.get(t.id) ?? 999,
+    }))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
+  for (let i = 0; i < updates.length; i++) {
+    await db
+      .update(tasks)
+      .set({ sortOrder: i + 1 })
+      .where(eq(tasks.id, updates[i].id));
+  }
+
+  revalidatePath("/dashboard");
+  return updates.map((t, i) => ({ id: t.id, sortOrder: i + 1 }));
 }

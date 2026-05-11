@@ -126,7 +126,7 @@ export function SettingsClient({ user: initialUser }: { user: UserProps }) {
             endpoint="avatar"
             appearance={{
               button:
-                "inline-flex h-9 cursor-pointer items-center justify-center rounded-full bg-[#F3F3F3] px-3 text-sm font-semibold tracking-wide text-fleent-ink transition-colors hover:bg-[#EAEAEA] ut-uploading:pointer-events-none ut-uploading:opacity-70",
+                "inline-flex h-9 cursor-pointer items-center justify-center rounded-[999px] bg-[#F3F3F3] px-3.5 text-sm font-semibold tracking-wide text-fleent-ink transition-colors hover:bg-[#EAEAEA] ut-uploading:pointer-events-none ut-uploading:opacity-70",
               allowedContent: "hidden",
             }}
             content={{ button: "Upload" }}

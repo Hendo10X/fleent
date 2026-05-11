@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   useIsMutating,
@@ -9,8 +9,8 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { CaretDown, Plus, Trash } from "@phosphor-icons/react";
-import { AutoStackButton } from "@/components/dashboard/auto-stack-button";
+import { CaretDown, Plus, Sparkle, Trash } from "@phosphor-icons/react";
+import { toast } from "sonner";
 import {
   Empty,
   EmptyContent,
@@ -22,6 +22,7 @@ import {
 import {
   deleteTask,
   toggleTaskComplete,
+  autoPrioritizeTasks,
 } from "@/app/dashboard/actions";
 import { StreakChip } from "@/components/dashboard/streak-widgets";
 import {
@@ -46,6 +47,7 @@ export function DashboardClient({
   currentStreak,
 }: Props) {
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const { data: liveTasks = tasks } = useQuery<DashboardTask[]>({
     queryKey: dashboardTasksQueryKey,
@@ -61,13 +63,11 @@ export function DashboardClient({
   // We hold off if any task mutation is still pending, so optimistic state
   // (e.g. a second add while the first is still in-flight) isn't clobbered.
   const pendingMutations = useIsMutating({ mutationKey: ["dashboard", "tasks"] });
-  const pendingRef = useRef(pendingMutations);
-  pendingRef.current = pendingMutations;
   useEffect(() => {
-    if (pendingRef.current === 0) {
+    if (pendingMutations === 0) {
       queryClient.setQueryData<DashboardTask[]>(dashboardTasksQueryKey, tasks);
     }
-  }, [tasks, queryClient]);
+  }, [tasks, queryClient, pendingMutations]);
 
   const activeTasks = liveTasks.filter((t) => t.status === "active");
   const activeCount = activeTasks.length;
@@ -77,6 +77,12 @@ export function DashboardClient({
 
   const dateLabel = formatDateLabel(new Date());
   const isEmpty = liveTasks.length === 0;
+
+  const prioritiseMutation = useMutation({
+    mutationFn: autoPrioritizeTasks,
+    onSuccess: () => router.refresh(),
+    onError: () => toast.error("Auto-stack failed. Check your API quota."),
+  });
 
   return (
     <main className="px-6 pt-12">
@@ -99,10 +105,24 @@ export function DashboardClient({
             <p className="self-start text-left text-sm tracking-wide text-fleent-mute">
               {activeCount} pending task{activeCount === 1 ? "" : "s"}
             </p>
-            {liveTasks.length > 0 && (
-              <div className="mt-3 self-start">
-                <AutoStackButton tasks={liveTasks} />
-              </div>
+            {activeCount >= 2 && (
+              <button
+                type="button"
+                onClick={() => prioritiseMutation.mutate()}
+                disabled={prioritiseMutation.isPending}
+                className="mt-3 inline-flex w-fit items-center gap-1.5 self-start rounded-full bg-white px-3 py-1.5 text-sm font-medium tracking-wide text-fleent-ink transition-colors duration-200 ease-out hover:bg-[#F3F3F3] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Sparkle
+                  size={14}
+                  weight="fill"
+                  className={
+                    prioritiseMutation.isPending
+                      ? "animate-pulse text-fleent-orange"
+                      : "text-fleent-orange"
+                  }
+                />
+                {prioritiseMutation.isPending ? "Stacking..." : "Auto-stack"}
+              </button>
             )}
           </div>
         </div>
@@ -110,13 +130,15 @@ export function DashboardClient({
         {isEmpty ? (
           <EmptyState />
         ) : (
-          <TaskList
-            topThree={topThree}
-            queued={queued}
-            queuedActiveCount={
-              queued.filter((t) => t.status === "active").length
-            }
-          />
+          <>
+            <TaskList
+              topThree={topThree}
+              queued={queued}
+              queuedActiveCount={
+                queued.filter((t) => t.status === "active").length
+              }
+            />
+          </>
         )}
       </section>
     </main>

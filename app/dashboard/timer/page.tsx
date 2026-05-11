@@ -4,19 +4,40 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import {
   ArrowClockwise,
+  FloppyDisk,
   Pause,
   Play,
   SkipForward,
+  SlidersHorizontal,
 } from "@phosphor-icons/react";
 
 type Mode = "focus" | "short" | "long";
 
-const MODES: { id: Mode; label: string; minutes: number; hint: string }[] = [
-  { id: "focus", label: "Focus", minutes: 25, hint: "Deep work" },
-  { id: "short", label: "Short", minutes: 5, hint: "Step back" },
-  { id: "long", label: "Long", minutes: 15, hint: "Recharge" },
-];
+type Durations = Record<Mode, number>;
 
+type PersistedTimer = {
+  mode: Mode;
+  running: boolean;
+  secondsLeft: number;
+  endAt: number | null;
+  durations: Durations;
+  pomodorosDone: number;
+  focusUntilLong: number;
+};
+
+const MODE_META: Record<Mode, { label: string; hint: string }> = {
+  focus: { label: "Focus", hint: "Deep work" },
+  short: { label: "Short", hint: "Step back" },
+  long: { label: "Long", hint: "Recharge" },
+};
+
+const DEFAULT_DURATIONS: Durations = {
+  focus: 25,
+  short: 5,
+  long: 15,
+};
+
+const STORAGE_KEY = "fleent-pomodoro-state-v1";
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 const SPRING = { type: "spring" as const, bounce: 0.18, duration: 0.45 };
 const FAST = { type: "spring" as const, bounce: 0.1, duration: 0.28 };
@@ -24,22 +45,34 @@ const FAST = { type: "spring" as const, bounce: 0.1, duration: 0.28 };
 const FOCUS_BEFORE_LONG = 4;
 
 export default function TimerPage() {
-  const [mode, setMode] = useState<Mode>("focus");
+  const [mode, setModeState] = useState<Mode>("focus");
   const [running, setRunning] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(() => secondsForMode("focus"));
+  const [durations, setDurations] = useState<Durations>(DEFAULT_DURATIONS);
+  const [draftDurations, setDraftDurations] =
+    useState<Durations>(DEFAULT_DURATIONS);
+  const [secondsLeft, setSecondsLeft] = useState(() =>
+    secondsForMode("focus", DEFAULT_DURATIONS),
+  );
   const [pomodorosDone, setPomodorosDone] = useState(0);
   const [focusUntilLong, setFocusUntilLong] = useState(FOCUS_BEFORE_LONG);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const [savedPulse, setSavedPulse] = useState(false);
 
   const endAtRef = useRef<number | null>(null);
-  const pausedTotalRef = useRef(0);
   const rafRef = useRef<number | null>(null);
   const modeRef = useRef(mode);
   const focusUntilLongRef = useRef(focusUntilLong);
+  const durationsRef = useRef(durations);
+  const runningRef = useRef(running);
 
   modeRef.current = mode;
   focusUntilLongRef.current = focusUntilLong;
+  durationsRef.current = durations;
+  runningRef.current = running;
 
-  const total = secondsForMode(mode);
+  const total = secondsForMode(mode, durations);
+  const modeMeta = MODE_META[mode];
 
   const syncFromEndTime = useCallback(() => {
     const end = endAtRef.current;
@@ -49,15 +82,70 @@ export default function TimerPage() {
     setSecondsLeft((prev) => (secs !== prev ? secs : prev));
   }, []);
 
-  // Reset duration when mode changes (not while merely pausing).
   useEffect(() => {
-    setRunning(false);
-    endAtRef.current = null;
-    pausedTotalRef.current = secondsForMode(mode);
-    setSecondsLeft(secondsForMode(mode));
-  }, [mode]);
+    const timer = window.setTimeout(() => {
+      const persisted = readPersistedTimer();
+      if (persisted) {
+        const safeDurations = normalizeDurations(persisted.durations);
+        const remaining = persisted.endAt
+          ? Math.max(0, Math.ceil((persisted.endAt - Date.now()) / 1000))
+          : persisted.secondsLeft;
 
-  // rAF loop while running — avoids visible drift vs wall clock.
+        setModeState(persisted.mode);
+        setDurations(safeDurations);
+        setDraftDurations(safeDurations);
+        setPomodorosDone(persisted.pomodorosDone);
+        setFocusUntilLong(persisted.focusUntilLong);
+        endAtRef.current =
+          persisted.running && remaining > 0 ? persisted.endAt : null;
+        setSecondsLeft(
+          remaining > 0
+            ? remaining
+            : secondsForMode(persisted.mode, safeDurations),
+        );
+        setRunning(persisted.running && remaining > 0);
+      }
+      setHydrated(true);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    persistTimer({
+      mode,
+      running,
+      secondsLeft,
+      endAt: endAtRef.current,
+      durations,
+      pomodorosDone,
+      focusUntilLong,
+    });
+  }, [
+    hydrated,
+    mode,
+    running,
+    secondsLeft,
+    durations,
+    pomodorosDone,
+    focusUntilLong,
+  ]);
+
+  useEffect(() => {
+    function syncWhenVisible() {
+      if (runningRef.current) syncFromEndTime();
+    }
+
+    window.addEventListener("focus", syncWhenVisible);
+    document.addEventListener("visibilitychange", syncWhenVisible);
+
+    return () => {
+      window.removeEventListener("focus", syncWhenVisible);
+      document.removeEventListener("visibilitychange", syncWhenVisible);
+    };
+  }, [syncFromEndTime]);
+
   useEffect(() => {
     if (!running) {
       if (rafRef.current !== null) {
@@ -91,7 +179,7 @@ export default function TimerPage() {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     };
-    // Deadline is set in handleStartPause; fallback above covers edge paths only.
+    // Deadline is set in handleStartPause; fallback above covers edge paths.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running]);
 
@@ -102,23 +190,31 @@ export default function TimerPage() {
     if (m === "focus") {
       setPomodorosDone((p) => p + 1);
       if (until <= 1) {
-        setMode("long");
+        setMode("long", { reset: true });
         setFocusUntilLong(FOCUS_BEFORE_LONG);
       } else {
-        setMode("short");
+        setMode("short", { reset: true });
         setFocusUntilLong((u) => u - 1);
       }
       return;
     }
 
-    setMode("focus");
+    setMode("focus", { reset: true });
+  }
+
+  function setMode(nextMode: Mode, options?: { reset?: boolean }) {
+    setRunning(false);
+    endAtRef.current = null;
+    setModeState(nextMode);
+    if (options?.reset !== false) {
+      setSecondsLeft(secondsForMode(nextMode, durationsRef.current));
+    }
   }
 
   function handleStartPause() {
     setRunning((wasRunning) => {
       if (!wasRunning) {
-        pausedTotalRef.current = secondsLeft;
-        endAtRef.current = Date.now() + pausedTotalRef.current * 1000;
+        endAtRef.current = Date.now() + secondsLeft * 1000;
       } else {
         syncFromEndTime();
         endAtRef.current = null;
@@ -131,45 +227,92 @@ export default function TimerPage() {
     setRunning(false);
     endAtRef.current = null;
     setSecondsLeft(total);
-    pausedTotalRef.current = total;
   }
 
-  /** Advance without counting a finished pomodoro (abandon rest of segment). */
   function handleSkipSegment() {
     setRunning(false);
     endAtRef.current = null;
-    const m = modeRef.current;
-    if (m === "focus") setMode("short");
+    if (modeRef.current === "focus") setMode("short");
     else setMode("focus");
+  }
+
+  function handleDurationChange(id: Mode, value: string) {
+    const minutes = clampMinutes(Number(value));
+    setDraftDurations((prev) => ({ ...prev, [id]: minutes }));
+  }
+
+  function handleSaveDurations() {
+    const next = normalizeDurations(draftDurations);
+    setDurations(next);
+    setDraftDurations(next);
+    if (!runningRef.current) {
+      setSecondsLeft(secondsForMode(modeRef.current, next));
+      endAtRef.current = null;
+    }
+    setSavedPulse(true);
+    window.setTimeout(() => setSavedPulse(false), 900);
   }
 
   const progress = total <= 0 ? 0 : 1 - secondsLeft / total;
   const display = formatTime(secondsLeft);
   const accent = accentForMode(mode);
-  const modeMeta = MODES.find((x) => x.id === mode);
 
   useEffect(() => {
     if (!running) {
       document.title = "Pomodoro · Fleent";
       return;
     }
-    document.title = `${display} · ${modeMeta?.hint ?? "Pomodoro"} · Fleent`;
+    document.title = `${display} · ${modeMeta.hint} · Fleent`;
     return () => {
       document.title = "Pomodoro · Fleent";
     };
-  }, [display, modeMeta?.hint, running]);
+  }, [display, modeMeta.hint, running]);
 
   return (
     <main className="px-6 pb-28 pt-12">
       <section className="mx-auto flex w-full max-w-md flex-col">
-        <div className="flex flex-col items-start text-left">
-          <h1 className="text-2xl font-bold tracking-tight text-fleent-ink">
-            Pomodoro
-          </h1>
-          <p className="mt-1 max-w-[28ch] text-sm tracking-wide text-fleent-mute">
-            Twenty-five on, five off. Every fourth focus earns a longer break.
-          </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col items-start text-left">
+            <h1 className="text-2xl font-bold tracking-tight text-fleent-ink">
+              Pomodoro
+            </h1>
+            <p className="mt-1 max-w-[30ch] text-sm tracking-wide text-fleent-mute">
+              Set your rhythm, then let it keep time even when you leave.
+            </p>
+          </div>
+
+          <motion.button
+            type="button"
+            aria-label="Timer settings"
+            aria-expanded={settingsOpen}
+            onClick={() => setSettingsOpen((value) => !value)}
+            whileTap={{ scale: 0.94 }}
+            transition={FAST}
+            className="inline-flex size-11 shrink-0 items-center justify-center rounded-[1.1rem] bg-white text-fleent-ink outline-none transition-colors hover:bg-[#F3F3F3] focus-visible:ring-2 focus-visible:ring-fleent-orange/40"
+          >
+            <SlidersHorizontal size={20} weight="bold" />
+          </motion.button>
         </div>
+
+        <AnimatePresence initial={false}>
+          {settingsOpen && (
+            <motion.div
+              key="settings"
+              initial={{ height: 0, opacity: 0, y: -6 }}
+              animate={{ height: "auto", opacity: 1, y: 0 }}
+              exit={{ height: 0, opacity: 0, y: -6 }}
+              transition={SPRING}
+              className="overflow-hidden"
+            >
+              <TimerSettings
+                values={draftDurations}
+                onChange={handleDurationChange}
+                onSave={handleSaveDurations}
+                savedPulse={savedPulse}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <ModeTabs mode={mode} onChange={setMode} disabled={running} />
 
@@ -179,7 +322,7 @@ export default function TimerPage() {
         >
           {mode === "focus"
             ? `${focusUntilLong} focus${focusUntilLong === 1 ? "" : "es"} until long break`
-            : modeMeta?.hint}
+            : modeMeta.hint}
         </p>
 
         <div className="mt-8 flex justify-center">
@@ -188,7 +331,7 @@ export default function TimerPage() {
             display={display}
             accent={accent}
             running={running}
-            modeLabel={modeMeta?.hint ?? ""}
+            modeLabel={modeMeta.hint}
             mode={mode}
           />
         </div>
@@ -242,11 +385,82 @@ export default function TimerPage() {
           <p className="text-center text-sm tracking-wide text-fleent-mute">
             {pomodorosDone === 0
               ? "Start your first focus when you're ready."
-              : `${pomodorosDone} pomodoro${pomodorosDone === 1 ? "" : "s"} completed this visit.`}
+              : `${pomodorosDone} pomodoro${pomodorosDone === 1 ? "" : "s"} completed.`}
           </p>
         </div>
       </section>
     </main>
+  );
+}
+
+function TimerSettings({
+  values,
+  onChange,
+  onSave,
+  savedPulse,
+}: {
+  values: Durations;
+  onChange: (id: Mode, value: string) => void;
+  onSave: () => void;
+  savedPulse: boolean;
+}) {
+  return (
+    <div className="mt-6 rounded-3xl bg-white p-4">
+      <div className="grid grid-cols-3 gap-2">
+        {(["focus", "short", "long"] as const).map((id) => (
+          <label key={id} className="flex min-w-0 flex-col gap-2">
+            <span className="truncate text-xs font-semibold tracking-[0.12em] text-fleent-mute uppercase">
+              {MODE_META[id].label}
+            </span>
+            <input
+              type="number"
+              min={1}
+              max={180}
+              value={values[id]}
+              onChange={(e) => onChange(id, e.target.value)}
+              className="h-11 w-full rounded-2xl bg-[#F3F3F3] px-3 text-center text-base font-bold tabular-nums text-fleent-ink outline-none focus-visible:ring-2 focus-visible:ring-fleent-orange/30"
+            />
+            <span className="text-center text-[11px] tracking-wide text-fleent-mute">
+              min
+            </span>
+          </label>
+        ))}
+      </div>
+
+      <motion.button
+        type="button"
+        onClick={onSave}
+        whileTap={{ scale: 0.97 }}
+        transition={FAST}
+        className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full bg-fleent-ink px-4 text-sm font-semibold tracking-wide text-white transition-colors hover:bg-fleent-ink/90"
+      >
+        <AnimatePresence mode="wait" initial={false}>
+          {savedPulse ? (
+            <motion.span
+              key="saved"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.18, ease: EASE_OUT }}
+            >
+              Saved
+            </motion.span>
+          ) : (
+            <motion.span
+              key="save"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.18, ease: EASE_OUT }}
+              className="inline-flex items-center gap-2"
+            >
+              <FloppyDisk size={16} weight="bold" />
+              Save times
+            </motion.span>
+          )}
+        </AnimatePresence>
+      </motion.button>
+    </div>
   );
 }
 
@@ -262,14 +476,14 @@ function ModeTabs({
   return (
     <LayoutGroup id="timer-mode-pill">
       <div className="mt-8 flex w-full items-center gap-1 self-center rounded-full bg-white p-1">
-        {MODES.map((m) => {
-          const active = m.id === mode;
+        {(["focus", "short", "long"] as const).map((id) => {
+          const active = id === mode;
           return (
             <button
-              key={m.id}
+              key={id}
               type="button"
               disabled={disabled}
-              onClick={() => onChange(m.id)}
+              onClick={() => onChange(id)}
               className="relative flex-1 rounded-full px-2 py-2 text-xs font-semibold tracking-wide outline-none transition-opacity duration-200 ease-out disabled:cursor-not-allowed disabled:opacity-50 sm:px-3 sm:text-sm"
             >
               {active && (
@@ -285,7 +499,7 @@ function ModeTabs({
                 transition={{ duration: 0.2, ease: EASE_OUT }}
                 className="relative"
               >
-                {m.label}
+                {MODE_META[id].label}
               </motion.span>
             </button>
           );
@@ -445,14 +659,65 @@ function minutesLabel(mode: Mode) {
   return "Long break";
 }
 
-function secondsForMode(mode: Mode): number {
-  return (MODES.find((x) => x.id === mode)?.minutes ?? 25) * 60;
+function secondsForMode(mode: Mode, durations: Durations): number {
+  return durations[mode] * 60;
 }
 
 function accentForMode(mode: Mode) {
   if (mode === "focus") return "#FF8629";
   if (mode === "short") return "#00A6FA";
   return "#00D74C";
+}
+
+function clampMinutes(value: number) {
+  if (!Number.isFinite(value)) return 1;
+  return Math.max(1, Math.min(180, Math.round(value)));
+}
+
+function normalizeDurations(value?: Partial<Durations>): Durations {
+  return {
+    focus: clampMinutes(value?.focus ?? DEFAULT_DURATIONS.focus),
+    short: clampMinutes(value?.short ?? DEFAULT_DURATIONS.short),
+    long: clampMinutes(value?.long ?? DEFAULT_DURATIONS.long),
+  };
+}
+
+function readPersistedTimer(): PersistedTimer | null {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<PersistedTimer>;
+    const mode = isMode(parsed.mode) ? parsed.mode : "focus";
+    const durations = normalizeDurations(parsed.durations);
+    return {
+      mode,
+      running: Boolean(parsed.running),
+      secondsLeft:
+        typeof parsed.secondsLeft === "number"
+          ? Math.max(0, parsed.secondsLeft)
+          : secondsForMode(mode, durations),
+      endAt: typeof parsed.endAt === "number" ? parsed.endAt : null,
+      durations,
+      pomodorosDone:
+        typeof parsed.pomodorosDone === "number"
+          ? Math.max(0, parsed.pomodorosDone)
+          : 0,
+      focusUntilLong:
+        typeof parsed.focusUntilLong === "number"
+          ? Math.max(1, Math.min(FOCUS_BEFORE_LONG, parsed.focusUntilLong))
+          : FOCUS_BEFORE_LONG,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function persistTimer(value: PersistedTimer) {
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+}
+
+function isMode(value: unknown): value is Mode {
+  return value === "focus" || value === "short" || value === "long";
 }
 
 function formatTime(secs: number) {

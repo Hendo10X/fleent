@@ -480,7 +480,7 @@ function RhythmDemo() {
   return (
     <div className="flex h-full flex-col">
       <p className="text-xs font-semibold tracking-[0.14em] text-fleent-mute uppercase">
-        Today's rhythm
+        Today&apos;s rhythm
       </p>
 
       <ul className="relative mt-4 flex flex-col gap-1">

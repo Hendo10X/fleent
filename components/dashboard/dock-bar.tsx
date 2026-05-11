@@ -73,8 +73,12 @@ export function DockBar({ user }: Props) {
 
   // Close panels on route change
   useEffect(() => {
-    setPanelOpen(false);
-    setMoreOpen(false);
+    const timer = window.setTimeout(() => {
+      setPanelOpen(false);
+      setMoreOpen(false);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [pathname]);
 
   const overflowItems = DOCK_ITEMS.filter((item) => !item.mobilePrimary);
@@ -138,8 +142,8 @@ export function DockBar({ user }: Props) {
                       }}
                       whileTap={{ scale: 0.97 }}
                       transition={FAST}
-                      className={`relative size-10 shrink-0 items-center justify-center rounded-[1.05rem] outline-none focus-visible:ring-2 focus-visible:ring-fleent-orange/40 sm:size-11 sm:rounded-[1.15rem] ${
-                        item.mobilePrimary ? "inline-flex" : "hidden sm:inline-flex"
+                      className={`relative inline-flex size-10 shrink-0 items-center justify-center rounded-[1.05rem] outline-none focus-visible:ring-2 focus-visible:ring-fleent-orange/40 sm:size-11 sm:rounded-[1.15rem] ${
+                        item.mobilePrimary ? "" : "max-sm:hidden"
                       }`}
                     >
                       {showPill && (
@@ -337,6 +341,7 @@ function AddTaskForm({ onDone }: { onDone: () => void }) {
         difficulty: input.difficulty ?? null,
         firstAction: input.firstAction?.trim() || null,
         status: "active",
+        sortOrder: 0,
       };
       // Active items first (sorted by status asc), so new task goes at the
       // top of the active group, matching the server ordering.

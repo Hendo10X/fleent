@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowRight, Eye, EyeSlash } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
@@ -10,6 +11,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/lib/auth-client";
 
 const loginSchema = z.object({
@@ -22,6 +24,7 @@ type LoginValues = z.infer<typeof loginSchema>;
 export function LoginForm() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const {
     register,
@@ -56,15 +59,28 @@ export function LoginForm() {
     }, 450);
   }
 
+  async function handleGoogleSignIn() {
+    setIsGoogleSubmitting(true);
+    const { error } = await authClient.signIn.social({
+      provider: "google",
+      callbackURL: "/dashboard",
+    });
+
+    if (error) {
+      setIsGoogleSubmitting(false);
+      toast.error(error.message ?? "Google sign-in failed.");
+    }
+  }
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
         <Field>
           <FieldLabel htmlFor="email">Email</FieldLabel>
           <Input
             id="email"
             type="email"
             autoComplete="email"
-            size="lg"
+            size="default"
             aria-invalid={Boolean(errors.email)}
             className="bg-white"
             {...register("email")}
@@ -79,7 +95,7 @@ export function LoginForm() {
               id="password"
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
-              size="lg"
+              size="default"
               aria-invalid={Boolean(errors.password)}
               className="bg-white"
               inputClassName="pr-12"
@@ -106,11 +122,48 @@ export function LoginForm() {
         <Button
           type="submit"
           size="xl"
-          loading={isSubmitting}
-          className="mt-2 h-12 rounded-full border-transparent bg-fleent-orange text-white shadow-none hover:bg-fleent-orange/90"
+          disabled={isSubmitting}
+          className="mt-1 h-11 rounded-full border-transparent bg-fleent-orange text-white shadow-none hover:bg-fleent-orange/90"
         >
-          Log in
-          <ArrowRight size={16} weight="bold" />
+          {isSubmitting ? (
+            <Spinner className="size-4 text-white" />
+          ) : (
+            <>
+              Log in
+              <ArrowRight size={16} weight="bold" />
+            </>
+          )}
+        </Button>
+
+        <div className="flex items-center gap-2">
+          <span className="h-px flex-1 bg-black/8" />
+          <span className="text-xs font-semibold tracking-[0.12em] text-fleent-mute uppercase">
+            or
+          </span>
+          <span className="h-px flex-1 bg-black/8" />
+        </div>
+
+        <Button
+          type="button"
+          size="xl"
+          disabled={isGoogleSubmitting}
+          onClick={handleGoogleSignIn}
+          className="h-11 rounded-full border-transparent bg-white text-fleent-ink shadow-none hover:bg-[#F3F3F3]"
+        >
+          {isGoogleSubmitting ? (
+            <Spinner className="size-4 text-fleent-orange" />
+          ) : (
+            <>
+              <Image
+                src="/images/Google_Symbol_0.svg"
+                alt=""
+                width={18}
+                height={18}
+                aria-hidden
+              />
+              Continue with Google
+            </>
+          )}
         </Button>
     </form>
   );

@@ -5,6 +5,7 @@ export type DashboardTask = {
   difficulty: number | null;
   firstAction: string | null;
   status: "active" | "completed";
+  sortOrder: number;
 };
 
 export const dashboardTasksQueryKey = ["dashboard", "tasks"] as const;

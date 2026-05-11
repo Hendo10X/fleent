@@ -59,7 +59,7 @@ export default async function StatsPage() {
             Stats
           </h1>
           <p className="mt-1 text-sm tracking-wide text-fleent-mute">
-            What you've done, and what's still humming.
+            What you&apos;ve done, and what&apos;s still humming.
           </p>
         </div>
 

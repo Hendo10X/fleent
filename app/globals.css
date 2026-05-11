@@ -249,5 +249,9 @@
     }
   html {
     @apply font-sans;
+    /* Reserve room for the scrollbar even when the page doesn't need one,
+       so navigating between long and short pages doesn't shift the layout
+       (and trip Tailwind's `sm:` breakpoint right at the edge). */
+    scrollbar-gutter: stable;
     }
 }

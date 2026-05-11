@@ -84,6 +84,7 @@ export const tasks = pgTable("tasks", {
   status: text("status").notNull().default("active"),
   startedAt: timestamp("started_at"),
   completedAt: timestamp("completed_at"),
+  sortOrder: integer("sort_order").default(0).notNull(),
   createdAt: timestamp("created_at")
     .$defaultFn(() => new Date())
     .notNull(),

@@ -32,7 +32,7 @@ export default async function DashboardPage() {
           ),
         ),
       )
-      .orderBy(asc(tasks.status), desc(tasks.createdAt)),
+      .orderBy(asc(tasks.status), asc(tasks.sortOrder), desc(tasks.createdAt)),
     db
       .select({ id: tasks.id })
       .from(tasks)
@@ -68,6 +68,7 @@ export default async function DashboardPage() {
         difficulty: t.difficulty,
         firstAction: t.firstAction,
         status: t.status as "active" | "completed",
+        sortOrder: t.sortOrder,
       }))}
       completedInLast4Weeks={completedRecent.length}
       currentStreak={currentStreak}
