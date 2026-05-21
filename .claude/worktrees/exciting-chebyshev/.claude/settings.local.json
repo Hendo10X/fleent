@@ -4,7 +4,9 @@
       "Read(//c/Users/Hendo/Documents/fleent/**)",
       "Bash(bun add *)",
       "Bash(rm -rf .next)",
-      "Bash(bun run *)"
+      "Bash(bun run *)",
+      "Bash(grep -E \"\\(\\\\d{2,}px|w-\\\\[.*px\\\\]\\)\")",
+      "Bash(grep -rn \"sql\\\\`\" --include=\"*.ts\" --include=\"*.tsx\")"
     ]
   }
 }

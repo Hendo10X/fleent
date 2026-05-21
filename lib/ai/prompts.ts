@@ -3,18 +3,6 @@
  * Keep them terse and concrete — Llama 3.3 follows tight contracts well.
  */
 
-export const PRIORITIZE_SYSTEM = `You output only valid JSON arrays. No markdown, no explanation.`;
-
-export const PRIORITIZE_USER = (
-  tasks: Array<{ id: string; title: string; difficulty: number | null; taskType: string | null }>,
-) => `You are a task prioritization assistant. Rank these tasks by importance and urgency.
-
-Return a JSON array of objects with the original id and a priorityScore (1-100, higher = more important).
-Only return valid JSON, no explanation, no markdown.
-
-Tasks:
-${JSON.stringify(tasks, null, 2)}`;
-
 export const BREAKDOWN_SYSTEM = `You break one task into 2–5 small, doable steps.
 
 Rules:
