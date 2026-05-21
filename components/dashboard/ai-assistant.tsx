@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { DefaultChatTransport } from "ai";
 import { useChat } from "@ai-sdk/react";
 import { AnimatePresence, motion } from "motion/react";
@@ -7,6 +8,7 @@ import {
   ArrowRight,
   Copy,
   MagicWand,
+  Notepad,
   Sparkle,
 } from "@phosphor-icons/react";
 import { useState } from "react";
@@ -56,13 +58,22 @@ export function AIAssistant() {
   return (
     <main className="px-6 pt-12">
       <section className="mx-auto flex w-full max-w-md flex-col">
-        <div className="flex flex-col items-start text-left">
-          <h1 className="text-2xl font-bold tracking-tight text-fleent-ink">
-            AI
-          </h1>
-          <p className="mt-1 max-w-[29ch] text-sm tracking-wide text-fleent-mute">
-            Translate one task into bite-size todos you can actually start.
-          </p>
+        <div className="flex w-full items-start justify-between gap-3 text-left">
+          <div className="flex min-w-0 flex-col items-start">
+            <h1 className="text-2xl font-bold tracking-tight text-fleent-ink">
+              AI
+            </h1>
+            <p className="mt-1 max-w-[29ch] text-sm tracking-wide text-fleent-mute">
+              Translate one task into bite-size todos you can actually start.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/notes"
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full bg-white px-3 text-sm font-medium tracking-tight text-fleent-ink transition-colors duration-200 ease-out hover:bg-[#F3F3F3]"
+          >
+            <Notepad size={14} weight="fill" className="text-fleent-orange" />
+            Add notes
+          </Link>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-3">

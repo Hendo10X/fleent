@@ -35,6 +35,8 @@ export function StreakChip({ count }: { count: number }) {
         <motion.button
           type="button"
           whileTap={{ scale: 0.96 }}
+          whileHover={count > 0 ? { rotate: [-8, 8, -4, 0] } : undefined}
+          transition={{ duration: 0.5, ease: "easeInOut" }}
           onClick={toggleStreak}
           aria-expanded={isOpen}
           aria-label={`Streak level: ${level.label}`}
@@ -43,6 +45,7 @@ export function StreakChip({ count }: { count: number }) {
           <motion.span
             animate={{
               opacity: count > 0 ? [1, 0.72, 1] : 1,
+              scale: count > 0 ? [1, 1.08, 1] : 1,
             }}
             transition={
               count > 0

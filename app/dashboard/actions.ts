@@ -2,13 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
-import { generateText } from "ai";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { streakEvents, streaks, tasks } from "@/db/schema";
 import { auth } from "@/lib/auth";
-import { aiModel } from "@/lib/ai/client";
-import { PRIORITIZE_SYSTEM, PRIORITIZE_USER } from "@/lib/ai/prompts";
 import { suggestBreakdown } from "@/lib/ai/breakdown";
 import { ensureTaskColumns } from "@/lib/db/migrations";
 
@@ -58,20 +55,62 @@ export async function toggleTaskComplete(id: string) {
 
   if (!existing) throw new Error("Task not found.");
 
-  const isComplete = existing.status === "completed";
+  const wasComplete = existing.status === "completed";
+  const nowComplete = !wasComplete;
 
   await db
     .update(tasks)
     .set({
-      status: isComplete ? "active" : "completed",
-      completedAt: isComplete ? null : new Date(),
+      status: nowComplete ? "completed" : "active",
+      completedAt: nowComplete ? new Date() : null,
     })
     .where(and(eq(tasks.id, id), eq(tasks.userId, session.user.id)));
 
-  if (!isComplete) await bumpStreakOnTaskComplete(session.user.id);
+  if (nowComplete) await bumpStreakOnTaskComplete(session.user.id);
+
+  // If this task is a breakdown child, keep its parent's status in sync:
+  //   - all siblings (incl. this one's new status) complete → mark parent done
+  //   - any sibling now active while parent is "completed" → reactivate parent
+  //
+  // Done on the server so the cascade is atomic from the client's POV — the
+  // dashboard refetch sees a coherent snapshot, no extra round-trip needed.
+  if (existing.parentId) {
+    await syncParentStatus(existing.parentId, session.user.id);
+  }
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/stats");
+}
+
+async function syncParentStatus(parentId: string, userId: string) {
+  const [parentRow] = await db
+    .select()
+    .from(tasks)
+    .where(and(eq(tasks.id, parentId), eq(tasks.userId, userId)))
+    .limit(1);
+  if (!parentRow) return;
+
+  const siblings = await db
+    .select({ status: tasks.status })
+    .from(tasks)
+    .where(and(eq(tasks.parentId, parentId), eq(tasks.userId, userId)));
+  if (siblings.length === 0) return;
+
+  const allComplete = siblings.every((s) => s.status === "completed");
+  const parentComplete = parentRow.status === "completed";
+
+  if (allComplete && !parentComplete) {
+    await db
+      .update(tasks)
+      .set({ status: "completed", completedAt: new Date() })
+      .where(and(eq(tasks.id, parentId), eq(tasks.userId, userId)));
+    await bumpStreakOnTaskComplete(userId);
+  } else if (!allComplete && parentComplete) {
+    await db
+      .update(tasks)
+      .set({ status: "active", completedAt: null })
+      .where(and(eq(tasks.id, parentId), eq(tasks.userId, userId)));
+  }
 }
 
 function utcDateKey(date: Date) {
@@ -163,61 +202,6 @@ export async function deleteTask(id: string) {
     );
 
   revalidatePath("/dashboard");
-}
-
-export async function autoPrioritizeTasks() {
-  const session = await auth.api.getSession({ headers: await headers() });
-  if (!session) throw new Error("Not signed in.");
-
-  await ensureTaskColumns();
-
-  const activeTasks = await db
-    .select({ id: tasks.id, title: tasks.title, difficulty: tasks.difficulty, taskType: tasks.taskType })
-    .from(tasks)
-    .where(
-      and(eq(tasks.userId, session.user.id), eq(tasks.status, "active")),
-    )
-    .orderBy(asc(tasks.createdAt));
-
-  if (activeTasks.length === 0) return [];
-
-  const { text } = await generateText({
-    model: aiModel,
-    system: PRIORITIZE_SYSTEM,
-    prompt: PRIORITIZE_USER(activeTasks),
-    temperature: 0.3,
-  });
-
-  const ranked: Array<{ id: string; priorityScore: number }> = JSON.parse(
-    text.replace(/```json|```/g, "").trim(),
-  );
-
-  const idIndex = new Map(ranked.map((r, i) => [r.id, i]));
-
-  const updates = activeTasks
-    .map((t) => ({
-      ...t,
-      sortOrder: idIndex.get(t.id) ?? 999,
-    }))
-    .sort((a, b) => a.sortOrder - b.sortOrder);
-
-  // One SQL statement instead of N — `UPDATE … SET sort_order = CASE id WHEN
-  // … END WHERE id IN (…)`. Cuts the previous N round-trips down to one and
-  // scales linearly with payload, not with task count.
-  const ids = updates.map((u) => u.id);
-  const cases = sql.join(
-    updates.map((u, i) => sql`WHEN ${u.id} THEN ${i + 1}`),
-    sql` `,
-  );
-  await db
-    .update(tasks)
-    .set({ sortOrder: sql`CASE ${tasks.id} ${cases} END` })
-    .where(
-      and(eq(tasks.userId, session.user.id), inArray(tasks.id, ids)),
-    );
-
-  revalidatePath("/dashboard");
-  return updates.map((t, i) => ({ id: t.id, sortOrder: i + 1 }));
 }
 
 /**

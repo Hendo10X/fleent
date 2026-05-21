@@ -1,15 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import {
   ArrowClockwise,
+  CheckCircle,
   FloppyDisk,
   Pause,
   Play,
   SkipForward,
   SlidersHorizontal,
+  X,
 } from "@phosphor-icons/react";
+import { toast } from "sonner";
+import { Fire } from "@/components/flint/Fire";
+import { Bean } from "@/components/flint/Bean";
+import { toggleTaskComplete } from "@/app/dashboard/actions";
 
 type Mode = "focus" | "short" | "long";
 
@@ -44,7 +51,19 @@ const FAST = { type: "spring" as const, bounce: 0.1, duration: 0.28 };
 
 const FOCUS_BEFORE_LONG = 4;
 
+type ActiveTask = { id: string; title: string };
+
 export default function TimerPage() {
+  const searchParams = useSearchParams();
+  // Read the handoff payload from /dashboard's "start" button. Held in
+  // local state so dismissing or completing the task clears the banner
+  // without forcing the user to navigate away.
+  const [activeTask, setActiveTask] = useState<ActiveTask | null>(() => {
+    const id = searchParams.get("taskId");
+    const title = searchParams.get("taskTitle");
+    return id && title ? { id, title } : null;
+  });
+
   const [mode, setModeState] = useState<Mode>("focus");
   const [running, setRunning] = useState(false);
   const [durations, setDurations] = useState<Durations>(DEFAULT_DURATIONS);
@@ -65,11 +84,15 @@ export default function TimerPage() {
   const focusUntilLongRef = useRef(focusUntilLong);
   const durationsRef = useRef(durations);
   const runningRef = useRef(running);
+  // Ref-tracked so the natural-complete callback (defined inside the RAF
+  // loop's effect) always reads the latest active task without re-binding.
+  const activeTaskRef = useRef<ActiveTask | null>(activeTask);
 
   modeRef.current = mode;
   focusUntilLongRef.current = focusUntilLong;
   durationsRef.current = durations;
   runningRef.current = running;
+  activeTaskRef.current = activeTask;
 
   const total = secondsForMode(mode, durations);
   const modeMeta = MODE_META[mode];
@@ -189,6 +212,18 @@ export default function TimerPage() {
 
     if (m === "focus") {
       setPomodorosDone((p) => p + 1);
+
+      // If the user started this session from a dashboard task, mark it
+      // done now. Fire-and-forget — the optimistic UI on the dashboard
+      // picks it up on the next visit; here we just clear the banner.
+      const finishedTask = activeTaskRef.current;
+      if (finishedTask) {
+        setActiveTask(null);
+        toggleTaskComplete(finishedTask.id)
+          .then(() => toast.success(`"${finishedTask.title}" — done!`))
+          .catch(() => toast.error("Couldn't mark the task done."));
+      }
+
       if (until <= 1) {
         setMode("long", { reset: true });
         setFocusUntilLong(FOCUS_BEFORE_LONG);
@@ -200,6 +235,15 @@ export default function TimerPage() {
     }
 
     setMode("focus", { reset: true });
+  }
+
+  function handleMarkActiveTaskDone() {
+    const t = activeTaskRef.current;
+    if (!t) return;
+    setActiveTask(null);
+    toggleTaskComplete(t.id)
+      .then(() => toast.success(`"${t.title}" — done!`))
+      .catch(() => toast.error("Couldn't mark the task done."));
   }
 
   function setMode(nextMode: Mode, options?: { reset?: boolean }) {
@@ -269,18 +313,13 @@ export default function TimerPage() {
   }, [display, modeMeta.hint, running]);
 
   return (
-    <main className="px-6 pb-28 pt-12">
-      <section className="mx-auto flex w-full max-w-md flex-col">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-col items-start text-left">
-            <h1 className="text-2xl font-bold tracking-tight text-fleent-ink">
-              Pomodoro
-            </h1>
-            <p className="mt-1 max-w-[30ch] text-sm tracking-wide text-fleent-mute">
-              Set your rhythm, then let it keep time even when you leave.
-            </p>
-          </div>
-
+    <main className="flex min-h-[calc(100dvh-6.5rem)] flex-col px-6 pt-6 pb-24">
+      <section className="mx-auto flex w-full max-w-md flex-1 flex-col">
+        {/* Compact header — title + settings on one row */}
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-xl font-bold tracking-tight text-fleent-ink">
+            Pomodoro
+          </h1>
           <motion.button
             type="button"
             aria-label="Timer settings"
@@ -288,9 +327,9 @@ export default function TimerPage() {
             onClick={() => setSettingsOpen((value) => !value)}
             whileTap={{ scale: 0.94 }}
             transition={FAST}
-            className="inline-flex size-11 shrink-0 items-center justify-center rounded-[1.1rem] bg-white text-fleent-ink outline-none transition-colors hover:bg-[#F3F3F3] focus-visible:ring-2 focus-visible:ring-fleent-orange/40"
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-white text-fleent-ink outline-none transition-colors hover:bg-[#F3F3F3] focus-visible:ring-2 focus-visible:ring-fleent-orange/40"
           >
-            <SlidersHorizontal size={20} weight="bold" />
+            <SlidersHorizontal size={16} weight="bold" />
           </motion.button>
         </div>
 
@@ -314,29 +353,82 @@ export default function TimerPage() {
           )}
         </AnimatePresence>
 
-        <ModeTabs mode={mode} onChange={setMode} disabled={running} />
+        {/* Active task handoff from the dashboard. Shown only when there
+            is one; the user can dismiss it without losing the timer. */}
+        <AnimatePresence initial={false}>
+          {activeTask && (
+            <motion.div
+              key={activeTask.id}
+              initial={{ height: 0, opacity: 0, y: -4 }}
+              animate={{ height: "auto", opacity: 1, y: 0 }}
+              exit={{ height: 0, opacity: 0, y: -4 }}
+              transition={{ duration: 0.22, ease: EASE_OUT }}
+              className="overflow-hidden"
+            >
+              <div className="mt-3 flex items-center gap-2 rounded-2xl bg-fleent-orange/10 px-3 py-2">
+                <span className="text-[10px] font-bold tracking-[0.14em] text-fleent-orange uppercase">
+                  Focusing on
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight text-fleent-ink">
+                  {activeTask.title}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleMarkActiveTaskDone}
+                  aria-label="Mark task done"
+                  className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-fleent-orange transition-colors hover:bg-white"
+                >
+                  <CheckCircle size={16} weight="fill" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTask(null)}
+                  aria-label="Stop focusing on this task"
+                  className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-fleent-mute transition-colors hover:bg-white hover:text-fleent-ink"
+                >
+                  <X size={14} weight="bold" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        <p
-          className="mt-3 text-center text-xs tracking-wide text-fleent-mute"
-          aria-live="polite"
-        >
-          {mode === "focus"
-            ? `${focusUntilLong} focus${focusUntilLong === 1 ? "" : "es"} until long break`
-            : modeMeta.hint}
-        </p>
-
-        <div className="mt-8 flex justify-center">
-          <ProgressDial
-            progress={progress}
-            display={display}
-            accent={accent}
-            running={running}
-            modeLabel={modeMeta.hint}
-            mode={mode}
+        {/* Bean is the hero. Fire sits above as a small companion that
+            still drives the focus metaphor. Time is the readout below.
+            Fixed compact sizes keep the whole hero ≤ 280 px tall so the
+            page never scrolls regardless of viewport height. */}
+        <div className="flex flex-1 flex-col items-center justify-center gap-1 py-2">
+          {mode === "focus" && (
+            <Fire
+              intensity={progress}
+              paused={!running}
+              className="w-12"
+            />
+          )}
+          <Bean
+            intensity={progress}
+            mood={beanMoodFor(mode, running, progress)}
+            className="w-32 sm:w-36"
           />
+          <div className="mt-1 flex flex-col items-center">
+            <p
+              aria-live="polite"
+              className="font-mono text-5xl font-bold tabular-nums tracking-tight"
+              style={{ color: accent }}
+            >
+              {display}
+            </p>
+            <p className="mt-1 text-xs tracking-wide text-fleent-mute">
+              {mode === "focus"
+                ? `${focusUntilLong} focus${focusUntilLong === 1 ? "" : "es"} until long break`
+                : modeMeta.hint}
+            </p>
+          </div>
         </div>
 
-        <div className="mt-10 flex items-center justify-center gap-3">
+        <ModeTabs mode={mode} onChange={setMode} disabled={running} />
+
+        <div className="mt-5 flex items-center justify-center gap-3">
           <RoundButton ariaLabel="Reset timer" onClick={handleReset}>
             <ArrowClockwise size={18} weight="bold" />
           </RoundButton>
@@ -726,4 +818,23 @@ function formatTime(secs: number) {
     .padStart(2, "0");
   const s = (secs % 60).toString().padStart(2, "0");
   return `${m}:${s}`;
+}
+
+/**
+ * Maps the current Pomodoro state onto Bean's mascot mood:
+ *  - Break modes → sleepy (Bean naps while you rest)
+ *  - Focus, idle (not running) → cold (waiting to start)
+ *  - Focus, early run (< 60%) → ideal (settling in)
+ *  - Focus, deep run (≥ 60%) → warm (in the groove)
+ *
+ * Returning `undefined` would defer to intensity-driven appearance instead.
+ */
+function beanMoodFor(
+  mode: Mode,
+  running: boolean,
+  progress: number,
+): "cold" | "ideal" | "warm" | "sleepy" {
+  if (mode !== "focus") return "sleepy";
+  if (!running) return "cold";
+  return progress < 0.6 ? "ideal" : "warm";
 }
