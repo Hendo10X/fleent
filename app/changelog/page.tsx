@@ -29,7 +29,7 @@ const RELEASES: Release[] = [
     date: "March 18, 2026",
     title: "Voice brain-dump and smarter calendar gaps",
     changes: [
-      { kind: "new", text: "Voice brain-dump on iOS and Android — speak your chaos, Fleent ranks it." },
+      { kind: "new", text: "Voice brain-dump on iOS and Android - speak your chaos, Fleent ranks it." },
       { kind: "new", text: "Calendar gap detection now ignores all-day events automatically." },
       { kind: "improved", text: "Three new flip styles for creative tasks." },
       { kind: "fixed", text: "Streak counter no longer rolls back when re-syncing across devices." },

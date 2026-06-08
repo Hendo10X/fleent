@@ -288,6 +288,6 @@ function formatMemberSince(iso: string) {
       year: "numeric",
     });
   } catch {
-    return "—";
+    return "-";
   }
 }

@@ -98,7 +98,7 @@ export default function CareersPage() {
               >
                 careers@fleent.app
               </Link>{" "}
-              — we read every one.
+              - we read every one.
             </p>
 
             <ul className="mt-8 flex flex-col overflow-hidden rounded-3xl bg-white">

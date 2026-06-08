@@ -2,15 +2,15 @@
 
 import { motion } from "motion/react";
 import {
-  ArrowDown,
-  CalendarDots,
-  HandTap,
+  Fire,
   type Icon,
+  Sparkle,
+  Stack,
 } from "@phosphor-icons/react";
 import data from "./data.json";
 
 type Color = "orange" | "green" | "blue";
-type IconName = "ArrowDown" | "HandTap" | "CalendarDots";
+type IconName = "Stack" | "Sparkle" | "Fire";
 
 type Pillar = {
   icon: IconName;
@@ -22,9 +22,9 @@ type Pillar = {
 const PILLARS: { items: Pillar[] } = data as never;
 
 const ICONS: Record<IconName, Icon> = {
-  ArrowDown,
-  HandTap,
-  CalendarDots,
+  Stack,
+  Sparkle,
+  Fire,
 };
 
 const COLOR_CLASS: Record<Color, string> = {

@@ -2,7 +2,7 @@
  * Public types for the Flint focus scene.
  *
  * The scene is a pure function of `intensity ∈ [0, 1]`. No timer logic, no
- * session state, no clock — just the visual.
+ * session state, no clock - just the visual.
  */
 
 export type FireProps = {
@@ -12,7 +12,7 @@ export type FireProps = {
   paused?: boolean;
   /** Explicit override; otherwise honours `prefers-reduced-motion`. */
   reducedMotion?: boolean;
-  /** For positioning only — do not pass decorative styles. */
+  /** For positioning only - do not pass decorative styles. */
   className?: string;
 };
 
@@ -20,10 +20,10 @@ export type FireProps = {
  * Discrete mascot variants. When provided, `mood` short-circuits the
  * intensity-driven appearance and renders a known, named expression.
  *
- *  - `cold`   — frozen blue, sad eyes, frown, snowflakes + shiver lines
- *  - `ideal`  — neutral cream, happy eyes, soft smile (the "in the zone" look)
- *  - `warm`   — cosy peach, smile + cheek blush
- *  - `sleepy` — closed eyes, drowsy smile (used for breaks / paused state)
+ *  - `cold`   - frozen blue, sad eyes, frown, snowflakes + shiver lines
+ *  - `ideal`  - neutral cream, happy eyes, soft smile (the "in the zone" look)
+ *  - `warm`   - cosy peach, smile + cheek blush
+ *  - `sleepy` - closed eyes, drowsy smile (used for breaks / paused state)
  */
 export type BeanMood = "cold" | "ideal" | "warm" | "sleepy";
 

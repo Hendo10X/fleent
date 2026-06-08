@@ -12,7 +12,7 @@ export default async function DashboardPage() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) redirect("/login");
 
-  // Idempotent, memoized — runs the ALTERs once per server process so the
+  // Idempotent, memoized - runs the ALTERs once per server process so the
   // schema matches the Drizzle types before we read.
   await ensureTaskColumns();
 
@@ -24,7 +24,7 @@ export default async function DashboardPage() {
   // Visible tasks: every active task + any task completed in the last 4 weeks.
   // Completed tasks stay (struck through) until the user deletes them.
   // We also pull *all* completed timestamps for streak computation in a single
-  // parallel query — previously this took 4 DB calls per dashboard load, now 3.
+  // parallel query - previously this took 4 DB calls per dashboard load, now 3.
   const [visibleTasks, completedDates, streakRow] = await Promise.all([
     db
       .select()
@@ -38,7 +38,7 @@ export default async function DashboardPage() {
           ),
         ),
       )
-      // Roots first (parent_id IS NULL), then children — keeps the client's
+      // Roots first (parent_id IS NULL), then children - keeps the client's
       // tree-build stable without needing a second pass to find parents.
       .orderBy(
         asc(tasks.status),

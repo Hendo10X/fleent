@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * `<Fire />` — the central focus-scene visual.
+ * `<Fire />` - the central focus-scene visual.
  *
  * Pure function of `intensity ∈ [0, 1]`. Renders a teardrop-shaped flame
  * (1–3 concentric layers, optional side licks + crown wisp), a static log
@@ -12,7 +12,7 @@
  * driven by Framer Motion's `repeat: Infinity, repeatType: "mirror"` so the
  * compositor can hand it off to the GPU.
  *
- * Stage transitions animate the path `d` over 600 ms with a smooth easing —
+ * Stage transitions animate the path `d` over 600 ms with a smooth easing -
  * all stage paths share the same `M, C, C, Z` structure so SVG-path
  * interpolation produces a clean morph rather than a snap.
  */
@@ -300,7 +300,7 @@ export function Fire({
   return (
     <div
       className={`relative ${className ?? ""}`}
-      // No `width` here — let the consumer's className (or parent) decide.
+      // No `width` here - let the consumer's className (or parent) decide.
       // Inline width would beat the Tailwind utility and cause overflow.
       style={{
         aspectRatio: `${FIRE_VIEWBOX.width} / ${FIRE_VIEWBOX.height}`,
@@ -311,7 +311,7 @@ export function Fire({
         className="absolute inset-0 h-full w-full"
         aria-hidden
       >
-        {/* Base shadow + log — never animate. */}
+        {/* Base shadow + log - never animate. */}
         <ellipse
           cx={FIRE_BASE_X}
           cy={FIRE_BASE_Y + 6}

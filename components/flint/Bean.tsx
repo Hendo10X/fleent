@@ -1,19 +1,19 @@
 "use client";
 
 /**
- * `<Bean />` — the companion pet, driven by `intensity ∈ [0, 1]`.
+ * `<Bean />` - the companion pet, driven by `intensity ∈ [0, 1]`.
  *
  * Visuals interpolate continuously by piping the intensity through a single
  * `useMotionValue` and deriving each animated field (body colour, cheek
  * blush, eye colour, etc.) with `useTransform`. None of these recompute via
- * React state — only via Framer Motion's render loop.
+ * React state - only via Framer Motion's render loop.
  *
- * `mood` is an optional explicit override — passing one of "cold" | "ideal"
+ * `mood` is an optional explicit override - passing one of "cold" | "ideal"
  * | "warm" | "sleepy" maps to a fixed synthetic intensity (see
  * `BEAN_MOOD_INTENSITY`) and renders that frozen state. `sleepy` is the
  * special variant: closed eyes + drowsy smile, used for breaks / paused.
  *
- * The "warm sigh" is a one-shot — gated by a `useRef` so it only fires the
+ * The "warm sigh" is a one-shot - gated by a `useRef` so it only fires the
  * first time intensity crosses 0.85 upward over the component's life.
  */
 
@@ -49,7 +49,7 @@ import type { BeanProps } from "@/lib/flint/types";
 // matter how the body is scaled.
 const CX = BEAN_BODY.cx; // 60
 const CY = BEAN_BODY.cy; // 60
-const EYE_Y = CY - 8; // 52 — slightly above centre
+const EYE_Y = CY - 8; // 52 - slightly above centre
 const CHEEK_Y = CY + 6; // 66
 const MOUTH_Y_BASE = CY + 22; // 82
 const EYE_DX = 16; // ±16 px from centre → x = 44, 76
@@ -201,7 +201,7 @@ function FrozenDecor({
     { clamp: true },
   );
 
-  // Sleepy is mutually exclusive with frozen decor — instead it gets a
+  // Sleepy is mutually exclusive with frozen decor - instead it gets a
   // pair of drifting "z"s for that "doing nothing on purpose" energy.
   if (sleepy) {
     return (
@@ -228,7 +228,7 @@ function FrozenDecor({
     );
   }
 
-  // Past the thaw point — nothing to draw.
+  // Past the thaw point - nothing to draw.
   if (
     intensity >= BEAN_THRESHOLDS.iceGoneAt &&
     intensity >= BEAN_THRESHOLDS.shiverLineGoneAt
@@ -268,7 +268,7 @@ export function Bean({
   className,
 }: BeanProps) {
   // When mood is set, all visuals are driven by a synthetic intensity so the
-  // existing transform pipeline still does the work — no parallel renderer.
+  // existing transform pipeline still does the work - no parallel renderer.
   const effective =
     mood !== undefined ? BEAN_MOOD_INTENSITY[mood] : clamp01(intensity);
   const sleepy = mood === "sleepy";

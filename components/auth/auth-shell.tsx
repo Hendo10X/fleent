@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 export function AuthShell({
@@ -18,16 +17,22 @@ export function AuthShell({
   return (
     <main className="grid min-h-screen place-items-center bg-fleent-background px-6 py-6">
       <section className="w-full max-w-md">
+        {/*
+          Decorative logo only - intentionally NOT wrapped in a Link. The
+          previous build linked to `/`, which dumped users out onto the
+          marketing site (its navbar collapses to a hamburger on mobile, so
+          it read as "a home page with no nav links"). Keeping the user
+          anchored on the auth flow is the expected behaviour for a logo
+          inside a login/signup form.
+        */}
         <div className="mb-5 flex justify-center">
-          <Link href="/" aria-label="Fleent">
-            <Image
-              src="/images/fleent.svg"
-              alt="Fleent"
-              width={76}
-              height={24}
-              priority
-            />
-          </Link>
+          <Image
+            src="/images/fleent.svg"
+            alt="Fleent"
+            width={76}
+            height={24}
+            priority
+          />
         </div>
 
         <div className="rounded-3xl bg-white p-6 sm:p-7">

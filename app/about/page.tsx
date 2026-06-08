@@ -7,7 +7,7 @@ import { PageHero } from "@/components/page-hero";
 const STORY = [
   {
     title: "We were the ones staring at the wall.",
-    body: "Fleent didn't start as a productivity app. It started as a workaround — a personal hack to bypass the dread that hit every time we opened a long to-do list. Three tasks. One screen. Just enough room to start.",
+    body: "Fleent didn't start as a productivity app. It started as a workaround - a personal hack to bypass the dread that hit every time we opened a long to-do list. Three tasks. One screen. Just enough room to start.",
   },
   {
     title: "Then we noticed everyone else was, too.",

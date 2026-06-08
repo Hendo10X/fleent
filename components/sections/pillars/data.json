@@ -1,22 +1,22 @@
 {
   "items": [
     {
-      "icon": "ArrowDown",
-      "color": "orange",
-      "heading": "3-Task Limit. No Overload.",
-      "body": "Visual peace. We hide the noise and only show your top 3 tasks. No scrolling through endless lists that trigger \"waiting mode\" or panic."
-    },
-    {
-      "icon": "HandTap",
-      "color": "green",
-      "heading": "AI Friction-Mapping. One-Tap Starts.",
-      "body": "Instant activation. One tap \"flips\" any daunting goal into its smallest physical starting action. Our AI handles the mental labor of planning so you can just move."
-    },
-    {
-      "icon": "CalendarDots",
+      "icon": "Stack",
       "color": "blue",
-      "heading": "Calendar-First. Zero Guilt.",
-      "body": "Temporal awareness. We sync your schedule and nominate tasks that actually fit your time gaps. No \"overdue\" red badges—just a clear window of what's possible right now."
+      "heading": "See 3 Tasks. Nothing More.",
+      "body": "Your top 3, front and center. No scrolling, no overwhelm, no \"where do I even start.\" Just the three things that matter right now."
+    },
+    {
+      "icon": "Sparkle",
+      "color": "green",
+      "heading": "AI Breaks It Down For You.",
+      "body": "Tap any task, and Fleent splits it into steps so small you can't say no to the first one. No more staring. Just a clear \"do this next.\""
+    },
+    {
+      "icon": "Fire",
+      "color": "orange",
+      "heading": "A Pet That Grows As You Work.",
+      "body": "Start the timer, and your pet warms up the longer you stay focused. It's not a streak - it's a vibe. Something to keep going for."
     }
   ]
 }

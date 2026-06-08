@@ -1,19 +1,19 @@
 {
-  "heading": ["Stop staring at the wall.", "Just flip the first task"],
-  "subheading": "Fleent syncs with your calendar to find your next gap, picks 3 easy wins, and breaks them into 10-second physical steps. No noise, just momentum.",
+  "heading": ["Starting is the hard part.", "So we made this app for you."],
+  "subheading": "See your top 3 tasks. Pick one, Fleent breaks it down into steps. Start the timer. Your pet gets warmer the longer you work - momentum you can actually see.",
   "ctas": [
     { "label": "Try for free", "href": "/signup", "variant": "orange" },
     { "label": "See demo", "href": "/demo", "variant": "white" }
   ],
   "image": {
-    "src": "/images/Fleentherocards.svg",
-    "alt": "Fleent task cards fanned out — a difficulty selector, a checklist, and a weekly taskboard.",
-    "width": 1050,
-    "height": 518
+    "src": "/images/fleentgroup.svg",
+    "alt": "Fleent task cards fanned out - a difficulty selector, a checklist, and a weekly taskboard.",
+    "width": 1105,
+    "height": 517
   },
   "imageMobile": {
     "src": "/images/fleent-mobile.svg",
-    "alt": "Fleent task cards stacked for mobile — difficulty selector, checklist, and weekly taskboard.",
+    "alt": "Fleent task cards stacked for mobile - difficulty selector, checklist, and weekly taskboard.",
     "width": 613,
     "height": 531
   }

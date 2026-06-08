@@ -72,7 +72,7 @@ export async function toggleTaskComplete(id: string) {
   //   - all siblings (incl. this one's new status) complete → mark parent done
   //   - any sibling now active while parent is "completed" → reactivate parent
   //
-  // Done on the server so the cascade is atomic from the client's POV — the
+  // Done on the server so the cascade is atomic from the client's POV - the
   // dashboard refetch sees a coherent snapshot, no extra round-trip needed.
   if (existing.parentId) {
     await syncParentStatus(existing.parentId, session.user.id);
@@ -208,7 +208,7 @@ export async function deleteTask(id: string) {
  * AI-powered breakdown of a single task title into 2–5 micro steps.
  * Used by the Add-task form and by per-task breakdown on the dashboard.
  *
- * Returns only suggestions — the caller decides what to persist.
+ * Returns only suggestions - the caller decides what to persist.
  */
 export async function suggestTaskBreakdown(title: string): Promise<string[]> {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -225,7 +225,7 @@ type BreakdownStep = { id: string; title: string };
 /**
  * Attach AI-generated child steps to an existing task.
  *
- * The parent task is preserved — it becomes a collapsible container in the
+ * The parent task is preserved - it becomes a collapsible container in the
  * UI with the children as its breakdown. Children inherit the parent's
  * taskType and difficulty.
  *
@@ -283,7 +283,7 @@ type CreateWithBreakdownInput = {
  * round-trip. Used by the Add-task form when the user accepts an AI
  * breakdown before adding the task.
  *
- * All ids are client-supplied — keeps optimistic UI stable across the
+ * All ids are client-supplied - keeps optimistic UI stable across the
  * server round-trip.
  */
 export async function createTaskWithBreakdown(

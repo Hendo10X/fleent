@@ -17,7 +17,7 @@ const POSTS: Post[] = [
     slug: "the-wall-of-awful",
     title: "The Wall of Awful: why \"just start\" is the worst advice for ADHD brains",
     excerpt:
-      "If \"just start\" worked, you'd already be done. Here's what's actually happening in your brain when a tiny task feels impossible — and the one thing that gets you over the wall.",
+      "If \"just start\" worked, you'd already be done. Here's what's actually happening in your brain when a tiny task feels impossible - and the one thing that gets you over the wall.",
     date: "Mar 12, 2026",
     readTime: "6 min",
     category: "Focus",
@@ -42,7 +42,7 @@ const POSTS: Post[] = [
   },
   {
     slug: "no-streak-shame",
-    title: "We track \"days you started\" — not days you finished. Here's why.",
+    title: "We track \"days you started\" - not days you finished. Here's why.",
     excerpt:
       "Most apps shame you back into the loop. We celebrate the smallest brave thing: showing up. The streak philosophy behind Fleent.",
     date: "Feb 11, 2026",
@@ -51,7 +51,7 @@ const POSTS: Post[] = [
   },
   {
     slug: "ai-without-the-hype",
-    title: "The AI in Fleent doesn't write your tasks — it shrinks them",
+    title: "The AI in Fleent doesn't write your tasks - it shrinks them",
     excerpt:
       "We had a chance to bolt on a chatbot. We didn't. Here's our quiet stance on AI inside the product, and what it actually does.",
     date: "Jan 30, 2026",
@@ -62,7 +62,7 @@ const POSTS: Post[] = [
     slug: "fleent-changelog-january",
     title: "What we shipped in January: voice dump, three new flips, calendar v2",
     excerpt:
-      "A short walk through the past month of releases — and the small thing we got right that took twelve attempts.",
+      "A short walk through the past month of releases - and the small thing we got right that took twelve attempts.",
     date: "Jan 15, 2026",
     readTime: "3 min",
     category: "Changelog",

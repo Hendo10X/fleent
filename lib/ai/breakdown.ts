@@ -16,13 +16,13 @@ const JSON_FENCE = /```(?:json)?\s*|\s*```/g;
  */
 function extractJsonObject(raw: string): unknown | null {
   const stripped = raw.replace(JSON_FENCE, "").trim();
-  // Fast path — full string is valid JSON.
+  // Fast path - full string is valid JSON.
   try {
     return JSON.parse(stripped);
   } catch {
     // fall through
   }
-  // Fallback — scan for the first balanced {...} block.
+  // Fallback - scan for the first balanced {...} block.
   const start = stripped.indexOf("{");
   const end = stripped.lastIndexOf("}");
   if (start === -1 || end === -1 || end <= start) return null;
@@ -38,7 +38,7 @@ function extractJsonObject(raw: string): unknown | null {
  *
  * Uses `generateText` + manual JSON extraction so any Groq model works
  * (their `json_schema` response format is restricted to a small subset of
- * models — see https://console.groq.com/docs/structured-outputs).
+ * models - see https://console.groq.com/docs/structured-outputs).
  */
 export async function suggestBreakdown(title: string): Promise<string[]> {
   const cleaned = title.trim();
@@ -48,7 +48,7 @@ export async function suggestBreakdown(title: string): Promise<string[]> {
     model: aiModel,
     system: `${BREAKDOWN_SYSTEM}
 
-Output strictly as JSON with this shape — no prose, no markdown:
+Output strictly as JSON with this shape - no prose, no markdown:
 { "steps": ["step one", "step two", "step three"] }`,
     prompt: `Task: ${cleaned}\n\nReturn 2–5 ordered steps as JSON.`,
     temperature: 0.4,

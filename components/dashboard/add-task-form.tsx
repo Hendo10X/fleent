@@ -14,7 +14,7 @@ import { TaskBreakdownPanel } from "@/components/dashboard/task-breakdown-panel"
 
 /**
  * Compose-a-task form. Used both as an inline panel on the dashboard and
- * (legacy) inside other surfaces — the `onDone` callback fires after the
+ * (legacy) inside other surfaces - the `onDone` callback fires after the
  * task lands optimistically, so the host can collapse the panel.
  */
 export function AddTaskForm({ onDone }: { onDone: () => void }) {

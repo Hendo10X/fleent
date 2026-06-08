@@ -1,25 +1,25 @@
 {
-  "eyebrow": "How it works",
-  "heading": "Get started in minutes",
-  "subheading": "Momentum is 60 seconds away. No complex setup. No \"productivity systems\" to learn. Fleent is designed to get out of your way so you can finally get started.",
+  "eyebrow": "Get started in minutes",
+  "heading": "Simple enough for your worst days.",
+  "subheading": "No setup. No system to learn. Just open it and go.",
   "steps": [
     {
-      "id": "sync",
-      "title": "Sync your space.",
+      "id": "profile",
+      "title": "Create your profile.",
       "color": "orange",
-      "body": "One-tap calendar integration. Connect your Google or Outlook calendar. Fleent doesn't just show your meetings; it scans for the quiet gaps where your best work actually happens.",
+      "body": "Tell Fleent who you are. Takes 30 seconds - no lengthy setup, no overwhelming options.",
       "image": {
-        "src": "/images/Fleent-Calender-gaps.svg",
-        "alt": "A weekly calendar showing open gaps between meetings.",
-        "width": 463,
-        "height": 250
+        "src": "/images/fleent-mobile.svg",
+        "alt": "Fleent task cards stacked for mobile.",
+        "width": 613,
+        "height": 531
       }
     },
     {
       "id": "dump",
-      "title": "Dump the noise.",
+      "title": "Add your first task.",
       "color": "blue",
-      "body": "Speak or type your chaos. Brain-dump your tasks without worrying about formatting or priority. Our AI extracts the actionable bits and nominates the top 3 that fit your current energy level.",
+      "body": "Type in anything on your mind. One thing. That's all you need to get going.",
       "image": {
         "src": "/images/Fleent-dumpthenoise.svg",
         "alt": "A 'what are you doing today?' input with Fleent adding the task underneath.",
@@ -29,14 +29,26 @@
     },
     {
       "id": "flip",
-      "title": "Flip to begin.",
+      "title": "Let AI break it down.",
       "color": "green",
-      "body": "The first step is the smallest. Tap the Saffron \"Flip\" button on any task. Watch your \"Big Project\" turn into a 10-second physical action. Do that one thing, and the rest will follow.",
+      "body": "Fleent splits your task into steps so small, starting feels effortless. No thinking required.",
       "image": {
         "src": "/images/fleent-fliptobegin.svg",
-        "alt": "Streak stats above a kitten care checklist on a lavender panel.",
+        "alt": "A task broken into a small, startable checklist.",
         "width": 411,
         "height": 215
+      }
+    },
+    {
+      "id": "timer",
+      "title": "Start the timer - and watch Fleent warm up.",
+      "color": "orange",
+      "body": "Hit focus, and your little buddy comes to life. The longer you work, the warmer they get.",
+      "image": {
+        "src": "/images/Fleent-friction-sort.svg",
+        "alt": "A task card with a flame icon as the focus timer runs.",
+        "width": 432,
+        "height": 311
       }
     }
   ]

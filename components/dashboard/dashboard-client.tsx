@@ -22,6 +22,7 @@ import { TaskBreakdownPanel } from "@/components/dashboard/task-breakdown-panel"
 import { CompletionBurst } from "@/components/dashboard/completion-burst";
 import { AddTaskForm } from "@/components/dashboard/add-task-form";
 import { accentFor, DIFFICULTY_META } from "@/lib/ui/colors";
+import { fireTaskConfetti } from "@/lib/ui/confetti";
 import {
   Empty,
   EmptyContent,
@@ -71,7 +72,7 @@ export function DashboardClient({
 
   // Reconcile the cache only when a *new* `tasks` reference arrives from the
   // server. Previously we also depended on `pendingMutations`, which caused
-  // the effect to fire when the mutation count flipped 1→0 — overwriting the
+  // the effect to fire when the mutation count flipped 1→0 - overwriting the
   // optimistic cache with the *stale* `tasks` prop and producing the visible
   // "row flashes twice" glitch.
   //
@@ -91,7 +92,7 @@ export function DashboardClient({
     lastReconciledRef.current = tasks;
   }, [tasks, queryClient, pendingMutations]);
 
-  // O(n) — done once per `liveTasks` change instead of on every render.
+  // O(n) - done once per `liveTasks` change instead of on every render.
   // Stable references downstream let `React.memo` actually skip work.
   const tree = useMemo(() => buildTaskTree(liveTasks), [liveTasks]);
   const topThree = useMemo(() => tree.slice(0, 3), [tree]);
@@ -125,11 +126,11 @@ export function DashboardClient({
   const [addOpen, setAddOpen] = useState(false);
 
   return (
-    <main className="px-6 pt-12">
-      <section className="mx-auto flex w-full max-w-md flex-col text-center">
+    <main className="px-6 pt-8 md:px-10 md:pt-2 lg:px-16">
+      <section className="mx-auto flex w-full max-w-md flex-col text-center md:max-w-2xl">
         <div className="flex w-full flex-col gap-3 text-left">
           <div className="flex w-full min-w-0 items-center justify-between gap-3">
-            <h1 className="min-w-0 flex-1 text-2xl font-bold tracking-tight text-fleent-ink">
+            <h1 className="min-w-0 flex-1 text-2xl font-bold tracking-tight text-fleent-ink md:text-3xl">
               {greeting.label}, {user.name}
             </h1>
             <StreakChip count={currentStreak} />
@@ -252,7 +253,7 @@ function buildTaskTree(tasks: DashboardTask[]): TaskNode[] {
     if (parent) {
       parent.children.push(t);
     } else {
-      // Parent isn't in this slice — promote child to root rather than drop it.
+      // Parent isn't in this slice - promote child to root rather than drop it.
       roots.push({ ...t, children: [] });
     }
   }
@@ -261,7 +262,7 @@ function buildTaskTree(tasks: DashboardTask[]): TaskNode[] {
 }
 
 /**
- * Render a single root node — either a plain `TaskRow` (no decoration, no
+ * Render a single root node - either a plain `TaskRow` (no decoration, no
  * extra space) or a `ParentTaskCard` when the task has breakdown children.
  */
 function renderRoot(node: TaskNode) {
@@ -381,13 +382,13 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
  *
  * - Dotted orange border distinguishes it from standalone rows
  * - Caret toggles the children dropdown (starts expanded after a new breakdown)
- * - The parent itself is NOT directly completable — it stands in as a folder
+ * - The parent itself is NOT directly completable - it stands in as a folder
  *   for its steps. Deleting it cascades to the children.
  *
  * Tasks with zero children render as a plain `TaskRow` instead so the UI
  * stays tight for everything that hasn't been broken down.
  *
- * Wrapped in `React.memo` below — the `tree` upstream is memoized on
+ * Wrapped in `React.memo` below - the `tree` upstream is memoized on
  * `liveTasks` so node references are stable until the data actually changes,
  * letting this component skip rerenders triggered by unrelated parent state.
  */
@@ -408,6 +409,14 @@ function ParentTaskCardImpl({
   const total = children.length;
   const allDone = total > 0 && completedCount === total;
   const progress = total > 0 ? completedCount / total : 0;
+
+  // Whole parent just finished (last step checked) → celebrate. Ref-gated so
+  // it fires once on the false→true transition, not on every re-render.
+  const prevAllDoneRef = useRef(allDone);
+  useEffect(() => {
+    if (allDone && !prevAllDoneRef.current) fireTaskConfetti();
+    prevAllDoneRef.current = allDone;
+  }, [allDone]);
 
   const deleteMutation = useMutation({
     mutationKey: ["dashboard", "tasks", "delete", parent.id],
@@ -446,13 +455,13 @@ function ParentTaskCardImpl({
       className="group flex flex-col overflow-hidden rounded-2xl border-2 border-dashed border-fleent-orange/45 bg-white/40 transition-colors duration-200 ease-out hover:bg-white/70"
     >
       {/*
-        Header is a plain row — NOT a button — so it can host sibling action
+        Header is a plain row - NOT a button - so it can host sibling action
         buttons without producing invalid `<button>` nested in `<button>`
         markup (which fails hydration in React 19 / Next 16).
         The expand toggle is a flex-1 button covering the title area; the
         trash sits next to it as its own button.
 
-        A subtle progress bar animates underneath as children get completed —
+        A subtle progress bar animates underneath as children get completed -
         gives instant, glanceable feedback for ADHD users without a wall of
         text.
       */}
@@ -560,7 +569,7 @@ function TaskRowImpl({
   compact = false,
 }: {
   task: DashboardTask;
-  /** Used when rendered as a child inside `ParentTaskCard` — tighter padding. */
+  /** Used when rendered as a child inside `ParentTaskCard` - tighter padding. */
   compact?: boolean;
 }) {
   const queryClient = useQueryClient();
@@ -570,7 +579,7 @@ function TaskRowImpl({
   const [showBurst, setShowBurst] = useState(false);
   const prevCompletedRef = useRef(completed);
 
-  // Fire a one-shot celebration burst on 0→1 transition only — never on
+  // Fire a one-shot celebration burst on 0→1 transition only - never on
   // initial mount, undo, or when the cache reconciles the same status.
   useEffect(() => {
     if (!prevCompletedRef.current && completed) {
@@ -592,6 +601,13 @@ function TaskRowImpl({
     mutationKey: ["dashboard", "tasks", "toggle", task.id],
     mutationFn: () => toggleTaskComplete(task.id),
     onMutate: () => {
+      // A standalone task (root row, no parent) checking off = a whole task
+      // done → confetti. Steps inside a breakdown don't celebrate here; the
+      // parent card fires confetti when its *last* step lands.
+      const completing = task.status !== "completed";
+      if (completing && !compact && !task.parentId) {
+        fireTaskConfetti();
+      }
       const prev =
         queryClient.getQueryData<DashboardTask[]>(dashboardTasksQueryKey) ??
         [];
@@ -639,7 +655,7 @@ function TaskRowImpl({
   });
 
   // Client-mints child ids so the optimistic insert and the server INSERT
-  // share identity — AnimatePresence sees the same keys before/after the
+  // share identity - AnimatePresence sees the same keys before/after the
   // server round-trip, avoiding the "task flashes twice" glitch.
   const breakdownMutation = useMutation({
     mutationKey: ["dashboard", "tasks", "breakdown", task.id],
@@ -790,7 +806,7 @@ function TaskRowImpl({
       {!completed && (
         <button
           type="button"
-          onClick={() => startFocusForTask(router, task)}
+          onClick={() => startFocusForTask(router, queryClient, task)}
           aria-label="Start a Pomodoro for this task"
           className="ml-1 inline-flex size-7 shrink-0 items-center justify-center rounded-full text-fleent-mute opacity-100 transition-all duration-200 ease-out hover:bg-fleent-orange/10 hover:text-fleent-orange focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
         >
@@ -876,15 +892,50 @@ function StrikeText({ text, completed }: { text: string; completed: boolean }) {
   );
 }
 
+const FOCUS_QUEUE_KEY = "fleent-focus-queue";
+
 /**
- * Hand a task off to the Pomodoro timer. The task id + title travel via URL
- * search params so the timer page can render the title above the dial and
- * mark the task complete when the focus session finishes.
+ * Hand a task off to the Pomodoro timer.
+ *
+ * For a standalone task this is a single-item queue. For a microtask (a
+ * breakdown child) we build a queue of the parent's remaining active steps,
+ * starting at the clicked one - so finishing each Pomodoro auto-advances to
+ * the next step. The user can start from any step; the queue begins there.
+ *
+ * The queue goes through sessionStorage (avoids a long URL); the head task is
+ * also put on the URL so the timer has something to show on a direct load.
  */
 function startFocusForTask(
   router: ReturnType<typeof useRouter>,
+  queryClient: ReturnType<typeof useQueryClient>,
   task: DashboardTask,
 ) {
+  const all =
+    queryClient.getQueryData<DashboardTask[]>(dashboardTasksQueryKey) ?? [];
+
+  let queue: { id: string; title: string }[];
+  if (task.parentId) {
+    // Cache order matches the dashboard's display order, so the steps after
+    // the clicked one line up naturally behind it.
+    const siblings = all.filter(
+      (t) => t.parentId === task.parentId && t.status === "active",
+    );
+    const startIdx = siblings.findIndex((s) => s.id === task.id);
+    const ordered = startIdx >= 0 ? siblings.slice(startIdx) : siblings;
+    queue = (ordered.length ? ordered : [task]).map((t) => ({
+      id: t.id,
+      title: t.title,
+    }));
+  } else {
+    queue = [{ id: task.id, title: task.title }];
+  }
+
+  try {
+    window.sessionStorage.setItem(FOCUS_QUEUE_KEY, JSON.stringify(queue));
+  } catch {
+    // sessionStorage unavailable - the URL head task still works as a fallback.
+  }
+
   const params = new URLSearchParams({
     taskId: task.id,
     taskTitle: task.title,
@@ -892,14 +943,14 @@ function startFocusForTask(
   router.push(`/dashboard/timer?${params.toString()}`);
 }
 
-/** Dashboard hero date line — uses full weekday name (not the mistaken "weekday" locale key). */
+/** Dashboard hero date line - uses full weekday name (not the mistaken "weekday" locale key). */
 function formatDateLabel(date: Date) {
   const month = date.toLocaleString("en-US", { month: "long" });
   const weekday = date.toLocaleString("en-US", { weekday: "long" });
   return `${month}, ${weekday} ${date.getDate()}`;
 }
 
-/** Time-of-day greeting — adds a small daily rhythm. */
+/** Time-of-day greeting - adds a small daily rhythm. */
 function getGreeting(date: Date): { label: string } {
   const h = date.getHours();
   if (h < 5) return { label: "Still up" };

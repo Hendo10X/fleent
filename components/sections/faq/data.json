@@ -1,31 +1,51 @@
 {
   "heading": "Frequently asked questions",
-  "subheading": "Quick answers to common questions about pricing, privacy, setup, and more.",
+  "subheading": "Quick answers to common questions about how Fleent works, pricing, and privacy.",
   "items": [
     {
-      "id": "todo-list",
-      "question": "How is this different from a regular to-do list?",
-      "answer": "Regular to-do lists let you write down everything you should do, then leave you alone with the overwhelm. Fleent caps the visible list at three tasks, ranks them by how easy they are to start right now, and breaks each one into a 10-second physical action. You don't pick — you just move."
+      "id": "adhd",
+      "question": "Is Fleent only for people with ADHD?",
+      "answer": "Not at all. Fleent is for anyone who struggles to start - whether you have ADHD, anxiety, or just find yourself staring at your to-do list, doing nothing. If getting started is hard, Fleent is for you."
     },
     {
-      "id": "easy-task",
-      "question": "What if I can't even start the \"easy\" task?",
-      "answer": "Tap the Flip button. The AI re-frames the task into something even smaller — usually a single physical motion you can do in under ten seconds. If that's still too much, Flip again. There's no minimum unit; momentum matters more than the size of the win."
+      "id": "why-three",
+      "question": "Why only 3 tasks?",
+      "answer": "Because more than 3 is where overwhelm starts. Fleent keeps your focus narrow on purpose - when one task is done, another can join. Less scrolling, more doing."
+    },
+    {
+      "id": "ai-breakdown",
+      "question": "How does the AI breakdown work?",
+      "answer": "Type in any task and Fleent's AI splits it into the smallest possible physical steps. Instead of \"write report,\" you get \"open a blank doc, write one sentence.\" Steps you can actually start."
+    },
+    {
+      "id": "privacy",
+      "question": "Is my data private?",
+      "answer": "Yes. Your tasks are yours. We don't sell your data or share it with third parties."
     },
     {
       "id": "pricing",
-      "question": "How much does Fleent cost?",
-      "answer": "Free to use for the core 3-task flow forever. The Pro plan adds calendar gap detection, voice brain-dump, and longer streak history for $6/month — billed yearly or monthly, cancel anytime."
+      "question": "Is Fleent free?",
+      "answer": "Most of Fleent is completely free - your 3-task dashboard, focus timer, and pet are all included at no cost. AI-powered features like task breakdowns are part of our paid plan, for when you're ready to let Fleent do the heavy thinking for you."
     },
     {
-      "id": "calendar-sync",
-      "question": "How does the Calendar Sync work?",
-      "answer": "Connect Google or Outlook in one tap. Fleent reads your event blocks (never your event content) and finds the open windows between meetings. It then nominates tasks that actually fit those gaps — a 12-minute window won't get an hour-long deep-work suggestion."
+      "id": "pet-timer",
+      "question": "What is the pet timer?",
+      "answer": "That's Fleent - your focus buddy. They start cold and sad when you haven't begun, and warm up as you work. When the flame appears, you're in flow. It's a small thing that makes a big difference."
     },
     {
-      "id": "training-data",
-      "question": "Is my data used to train the AI?",
-      "answer": "No. Your tasks, dumps, and calendar metadata are used only to power your own dashboard. Nothing leaves your account to train models, and we don't sell or share it. You can export or delete everything from Settings whenever you want."
+      "id": "mobile",
+      "question": "Does it work on mobile?",
+      "answer": "Yes - Fleent runs right in your browser on desktop and mobile, so you can pick up your top 3 wherever you are."
+    },
+    {
+      "id": "unfinished",
+      "question": "What if I can't finish a task in one session?",
+      "answer": "No guilt here. Fleent tracks the days you showed up and started - not whether you finished. Progress is progress."
+    },
+    {
+      "id": "cant-start",
+      "question": "What if I can't even start the \"easy\" step?",
+      "answer": "Hit the AI breakdown again and go smaller. There's no floor on how tiny a step can be. \"Open the document\" is a valid step. So is \"find my charger.\" Start there."
     }
   ]
 }
