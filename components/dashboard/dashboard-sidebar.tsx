@@ -12,17 +12,6 @@ import {
   Sparkle,
   Timer,
 } from "@phosphor-icons/react";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
 import { UserAvatar } from "@/components/dashboard/dock-bar";
 
 type NavItem = { label: string; href: string; icon: Icon };
@@ -39,85 +28,83 @@ type Props = {
   user: { name: string; image: string | null };
 };
 
+/**
+ * Desktop sidebar. Deliberately plain: a real flex column (NOT position:
+ * fixed) that's `sticky` to the viewport and shown only at `md+` via CSS
+ * (`hidden md:flex`). No context, no media-query JS, no portalled sheet, and
+ * no fixed positioning — so it can't be knocked out of view by transformed
+ * ancestors / smooth-scroll, and can never desync across navigation. Mobile
+ * uses the floating dock instead (see DashboardLayout).
+ */
 export function DashboardSidebar({ user }: Props) {
   const pathname = usePathname();
 
+  function isActive(href: string) {
+    return href === "/dashboard"
+      ? pathname === "/dashboard"
+      : pathname.startsWith(href);
+  }
+
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1.5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
-          <Image
-            src="/images/fleent.svg"
-            alt="Fleent"
-            width={64}
-            height={20}
-            priority
-            className="group-data-[collapsible=icon]:hidden"
+    <aside className="sticky top-0 hidden h-svh w-60 shrink-0 flex-col self-start border-r border-black/5 bg-white px-3 py-4 md:flex">
+      <div className="flex items-center px-2 pb-4">
+        <Image
+          src="/images/fleent.svg"
+          alt="Fleent"
+          width={72}
+          height={22}
+          priority
+        />
+      </div>
+
+      <nav className="flex flex-1 flex-col gap-1">
+        {NAV.map((item) => {
+          const active = isActive(item.href);
+          const ItemIcon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={active ? "page" : undefined}
+              className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium tracking-tight transition-colors duration-200 ease-out ${
+                active
+                  ? "bg-fleent-orange/10 text-fleent-orange"
+                  : "text-fleent-ink hover:bg-[#F3F3F3]"
+              }`}
+            >
+              <ItemIcon size={18} weight={active ? "fill" : "regular"} />
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="mt-2 flex flex-col gap-1 border-t border-black/5 pt-3">
+        <Link
+          href="/dashboard/settings"
+          aria-current={
+            pathname.startsWith("/dashboard/settings") ? "page" : undefined
+          }
+          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium tracking-tight transition-colors duration-200 ease-out ${
+            pathname.startsWith("/dashboard/settings")
+              ? "bg-fleent-orange/10 text-fleent-orange"
+              : "text-fleent-ink hover:bg-[#F3F3F3]"
+          }`}
+        >
+          <Gear size={18} weight="regular" />
+          Settings
+        </Link>
+
+        <div className="flex items-center gap-3 rounded-xl px-2 py-2">
+          <UserAvatar
+            user={user}
+            className="size-8 shrink-0 overflow-hidden rounded-full bg-[#F3F3F3]"
           />
-          <span className="hidden size-7 items-center justify-center rounded-lg bg-fleent-orange text-sm font-bold text-white group-data-[collapsible=icon]:flex">
-            F
+          <span className="min-w-0 truncate text-sm font-medium tracking-tight text-fleent-ink">
+            {user.name}
           </span>
         </div>
-      </SidebarHeader>
-
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {NAV.map((item) => {
-                const active =
-                  item.href === "/dashboard"
-                    ? pathname === "/dashboard"
-                    : pathname.startsWith(item.href);
-                const ItemIcon = item.icon;
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      isActive={active}
-                      tooltip={item.label}
-                      render={<Link href={item.href} />}
-                    >
-                      <ItemIcon
-                        size={18}
-                        weight={active ? "fill" : "regular"}
-                      />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              isActive={pathname.startsWith("/dashboard/settings")}
-              tooltip="Settings"
-              render={<Link href="/dashboard/settings" />}
-            >
-              <Gear size={18} weight="regular" />
-              <span>Settings</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              tooltip={user.name}
-              render={<Link href="/dashboard/settings" />}
-            >
-              <UserAvatar
-                user={user}
-                className="size-7 shrink-0 overflow-hidden rounded-full bg-[#F3F3F3]"
-              />
-              <span className="truncate font-medium">{user.name}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
-    </Sidebar>
+      </div>
+    </aside>
   );
 }
