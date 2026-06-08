@@ -89,7 +89,11 @@ export function SidebarProvider({
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }): React.ReactElement {
-  const isMobile = useMediaQuery("max-md");
+  // Use an explicit 768px boundary to match Tailwind's `md:` breakpoint used
+  // throughout the dashboard layout/dock. The hook's named `md` token is
+  // 800px, which left a 768-799px dead-zone where the desktop sidebar AND the
+  // mobile dock were both hidden, so navigation vanished entirely.
+  const isMobile = useMediaQuery({ max: 768 });
   const [openMobile, setOpenMobile] = React.useState(false);
 
   // This is the internal state of the sidebar.

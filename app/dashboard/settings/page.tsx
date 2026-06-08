@@ -1,7 +1,12 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
-import "@uploadthing/react/styles.css";
+// NOTE: do NOT import "@uploadthing/react/styles.css" here. That stylesheet
+// ships its own full Tailwind build (preflight reset + utility classes) which,
+// once loaded, globally overrides the app's own utilities and breaks the
+// dashboard sidebar (`hidden md:flex`) on every page until a full reload. The
+// upload button is fully styled via its `appearance` prop in SettingsClient,
+// so the default stylesheet isn't needed.
 import { db } from "@/db";
 import { user } from "@/db/schema";
 import { SettingsClient } from "@/components/dashboard/settings-client";

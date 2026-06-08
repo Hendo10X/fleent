@@ -7,7 +7,9 @@
       "Bash(bun run *)",
       "Bash(grep -E \"\\(\\\\d{2,}px|w-\\\\[.*px\\\\]\\)\")",
       "Bash(grep -rn \"sql\\\\`\" --include=\"*.ts\" --include=\"*.tsx\")",
-      "Bash(grep -l \"redirect\\\\|push.*\\\\\\\\\\\\\"/\\\\\\\\\\\\\"\" components/auth/*.tsx)"
+      "Bash(grep -l \"redirect\\\\|push.*\\\\\\\\\\\\\"/\\\\\\\\\\\\\"\" components/auth/*.tsx)",
+      "Bash(xargs grep -ln \"useMediaQuery\")",
+      "Bash(xargs grep -l \"export.*useMediaQuery\")"
     ]
   }
 }

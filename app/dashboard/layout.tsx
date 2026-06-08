@@ -4,7 +4,6 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { DockBar, UserAvatar } from "@/components/dashboard/dock-bar";
 import { DashboardSidebar } from "@/components/dashboard/dashboard-sidebar";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 export default async function DashboardLayout({
   children,
@@ -20,16 +19,16 @@ export default async function DashboardLayout({
   };
 
   return (
-    <SidebarProvider>
-      {/* Desktop navigation - the shadcn sidebar (hidden < md). */}
+    // Real flex row: the sidebar is a layout column, not a floating overlay.
+    <div className="flex min-h-svh bg-fleent-background">
+      {/* Desktop navigation - sticky column, shown only at md+ via CSS. */}
       <DashboardSidebar user={user} />
 
-      {/* Content column. A plain div (not SidebarInset) so each page keeps
-          its own semantic <main> without nesting two <main> elements. */}
-      <div className="relative flex min-h-svh w-full flex-1 flex-col bg-fleent-background">
+      {/* Content column. */}
+      <div className="relative flex min-h-svh w-full min-w-0 flex-col">
         {/* Small-screen avatar - taps through to Settings. Shown only below
-            sm; from sm–md the dock renders its own avatar, and ≥ md the
-            sidebar footer takes over. Prevents a duplicate avatar on tablet. */}
+            sm; the dock renders its own avatar from sm up, and the sidebar
+            footer takes over at md. Prevents a duplicate avatar on tablet. */}
         <Link
           href="/dashboard/settings"
           aria-label="Open settings"
@@ -41,19 +40,14 @@ export default async function DashboardLayout({
           />
         </Link>
 
-        {/* Desktop top bar - sidebar collapse toggle. Hidden on mobile. */}
-        <header className="sticky top-0 z-20 hidden h-12 items-center gap-2 px-4 md:flex">
-          <SidebarTrigger className="text-fleent-mute hover:text-fleent-ink" />
-        </header>
-
         {/* Extra bottom padding on mobile clears the floating dock. */}
-        <div className="flex-1 pb-32 md:pb-10">{children}</div>
+        <div className="flex-1 pt-6 pb-32 md:pt-4 md:pb-10">{children}</div>
       </div>
 
-      {/* Mobile navigation - the floating dock (hidden ≥ md). */}
+      {/* Mobile navigation - the floating dock (hidden at md+). */}
       <div className="md:hidden">
         <DockBar user={user} />
       </div>
-    </SidebarProvider>
+    </div>
   );
 }
