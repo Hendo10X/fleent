@@ -6,10 +6,10 @@
     { "label": "See demo", "href": "/demo", "variant": "white" }
   ],
   "image": {
-    "src": "/images/Fleentherocards.svg",
+    "src": "/images/fleentgroup.svg",
     "alt": "Fleent task cards fanned out - a difficulty selector, a checklist, and a weekly taskboard.",
-    "width": 1050,
-    "height": 518
+    "width": 1105,
+    "height": 517
   },
   "imageMobile": {
     "src": "/images/fleent-mobile.svg",

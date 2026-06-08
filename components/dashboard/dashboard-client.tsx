@@ -806,7 +806,7 @@ function TaskRowImpl({
       {!completed && (
         <button
           type="button"
-          onClick={() => startFocusForTask(router, task)}
+          onClick={() => startFocusForTask(router, queryClient, task)}
           aria-label="Start a Pomodoro for this task"
           className="ml-1 inline-flex size-7 shrink-0 items-center justify-center rounded-full text-fleent-mute opacity-100 transition-all duration-200 ease-out hover:bg-fleent-orange/10 hover:text-fleent-orange focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
         >
@@ -892,15 +892,50 @@ function StrikeText({ text, completed }: { text: string; completed: boolean }) {
   );
 }
 
+const FOCUS_QUEUE_KEY = "fleent-focus-queue";
+
 /**
- * Hand a task off to the Pomodoro timer. The task id + title travel via URL
- * search params so the timer page can render the title above the dial and
- * mark the task complete when the focus session finishes.
+ * Hand a task off to the Pomodoro timer.
+ *
+ * For a standalone task this is a single-item queue. For a microtask (a
+ * breakdown child) we build a queue of the parent's remaining active steps,
+ * starting at the clicked one - so finishing each Pomodoro auto-advances to
+ * the next step. The user can start from any step; the queue begins there.
+ *
+ * The queue goes through sessionStorage (avoids a long URL); the head task is
+ * also put on the URL so the timer has something to show on a direct load.
  */
 function startFocusForTask(
   router: ReturnType<typeof useRouter>,
+  queryClient: ReturnType<typeof useQueryClient>,
   task: DashboardTask,
 ) {
+  const all =
+    queryClient.getQueryData<DashboardTask[]>(dashboardTasksQueryKey) ?? [];
+
+  let queue: { id: string; title: string }[];
+  if (task.parentId) {
+    // Cache order matches the dashboard's display order, so the steps after
+    // the clicked one line up naturally behind it.
+    const siblings = all.filter(
+      (t) => t.parentId === task.parentId && t.status === "active",
+    );
+    const startIdx = siblings.findIndex((s) => s.id === task.id);
+    const ordered = startIdx >= 0 ? siblings.slice(startIdx) : siblings;
+    queue = (ordered.length ? ordered : [task]).map((t) => ({
+      id: t.id,
+      title: t.title,
+    }));
+  } else {
+    queue = [{ id: task.id, title: task.title }];
+  }
+
+  try {
+    window.sessionStorage.setItem(FOCUS_QUEUE_KEY, JSON.stringify(queue));
+  } catch {
+    // sessionStorage unavailable - the URL head task still works as a fallback.
+  }
+
   const params = new URLSearchParams({
     taskId: task.id,
     taskTitle: task.title,

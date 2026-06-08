@@ -46,6 +46,9 @@ const DEFAULT_DURATIONS: Durations = {
 };
 
 const STORAGE_KEY = "fleent-pomodoro-state-v1";
+// Session-scoped handoff: the dashboard "start" button writes the ordered
+// list of microtasks to focus through; the timer reads + advances it.
+const FOCUS_QUEUE_KEY = "fleent-focus-queue";
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 const SPRING = { type: "spring" as const, bounce: 0.18, duration: 0.45 };
 const FAST = { type: "spring" as const, bounce: 0.1, duration: 0.28 };
@@ -56,15 +59,17 @@ type ActiveTask = { id: string; title: string };
 
 export default function TimerPage() {
   const searchParams = useSearchParams();
-  // Read the handoff payload from /dashboard's "start" button. Held in
-  // local state so dismissing or completing the task clears the banner
-  // without forcing the user to navigate away.
-  const [activeTask, setActiveTask] = useState<ActiveTask | null>(() => {
+  // Focus queue: the head is the task you're currently working through; the
+  // tail is what auto-advances after each Pomodoro. Seeded from the URL for a
+  // single task; replaced by the sessionStorage queue (a whole breakdown)
+  // in an effect to avoid an SSR hydration mismatch.
+  const [queue, setQueue] = useState<ActiveTask[]>(() => {
     const id = searchParams.get("taskId");
     const title = searchParams.get("taskTitle");
-    return id && title ? { id, title } : null;
+    return id && title ? [{ id, title }] : [];
   });
-  // Stays true once the active task is completed - keeps the banner visible
+  const activeTask = queue[0] ?? null;
+  // Stays true once the *whole* queue is finished - keeps the banner visible
   // with a strike-through instead of yanking it away.
   const [taskDone, setTaskDone] = useState(false);
 
@@ -89,14 +94,14 @@ export default function TimerPage() {
   const durationsRef = useRef(durations);
   const runningRef = useRef(running);
   // Ref-tracked so the natural-complete callback (defined inside the RAF
-  // loop's effect) always reads the latest active task without re-binding.
-  const activeTaskRef = useRef<ActiveTask | null>(activeTask);
+  // loop's effect) always reads the latest queue without re-binding.
+  const queueRef = useRef<ActiveTask[]>(queue);
 
   modeRef.current = mode;
   focusUntilLongRef.current = focusUntilLong;
   durationsRef.current = durations;
   runningRef.current = running;
-  activeTaskRef.current = activeTask;
+  queueRef.current = queue;
 
   const total = secondsForMode(mode, durations);
   const modeMeta = MODE_META[mode];
@@ -134,6 +139,15 @@ export default function TimerPage() {
       }
       setHydrated(true);
     }, 0);
+
+    // One-shot: pull a multi-task focus queue from sessionStorage (set by the
+    // dashboard "start" button). Done here, not in render, to avoid an SSR
+    // hydration mismatch from reading sessionStorage during the first paint.
+    const stored = readStoredQueue();
+    if (stored.length > 0) {
+      setQueue(stored);
+      setTaskDone(false);
+    }
 
     return () => window.clearTimeout(timer);
   }, []);
@@ -210,6 +224,26 @@ export default function TimerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running]);
 
+  /**
+   * Mark the current (head) task complete on the server, celebrate, and pop
+   * it off the queue so the next microtask becomes active. When the queue
+   * empties, flip the banner to its struck-through "all done" state.
+   */
+  function completeCurrentTask() {
+    const t = queueRef.current[0];
+    if (!t) return;
+
+    fireTaskConfetti();
+    toggleTaskComplete(t.id)
+      .then(() => toast.success(`"${t.title}" - done!`))
+      .catch(() => toast.error("Couldn't mark the task done."));
+
+    const next = queueRef.current.slice(1);
+    writeStoredQueue(next);
+    setQueue(next);
+    if (next.length === 0) setTaskDone(true);
+  }
+
   function handleNaturalComplete() {
     const m = modeRef.current;
     const until = focusUntilLongRef.current;
@@ -217,17 +251,10 @@ export default function TimerPage() {
     if (m === "focus") {
       setPomodorosDone((p) => p + 1);
 
-      // If the user started this session from a dashboard task, mark it
-      // done now. The banner stays - it flips to a struck-through "done"
-      // state and we fire confetti. Dismissing the banner clears it.
-      const finishedTask = activeTaskRef.current;
-      if (finishedTask) {
-        setTaskDone(true);
-        fireTaskConfetti();
-        toggleTaskComplete(finishedTask.id)
-          .then(() => toast.success(`"${finishedTask.title}" - done!`))
-          .catch(() => toast.error("Couldn't mark the task done."));
-      }
+      // If this Pomodoro was focused on a task, complete it and advance to the
+      // next microtask in the queue. The next task waits as the active task
+      // through the break, then the following focus session works on it.
+      if (queueRef.current.length > 0) completeCurrentTask();
 
       if (until <= 1) {
         setMode("long", { reset: true });
@@ -243,13 +270,14 @@ export default function TimerPage() {
   }
 
   function handleMarkActiveTaskDone() {
-    const t = activeTaskRef.current;
-    if (!t || taskDone) return;
-    setTaskDone(true);
-    fireTaskConfetti();
-    toggleTaskComplete(t.id)
-      .then(() => toast.success(`"${t.title}" - done!`))
-      .catch(() => toast.error("Couldn't mark the task done."));
+    if (taskDone || queueRef.current.length === 0) return;
+    completeCurrentTask();
+  }
+
+  function handleDismissQueue() {
+    writeStoredQueue([]);
+    setQueue([]);
+    setTaskDone(false);
   }
 
   function setMode(nextMode: Mode, options?: { reset?: boolean }) {
@@ -359,12 +387,12 @@ export default function TimerPage() {
           )}
         </AnimatePresence>
 
-        {/* Active task handoff from the dashboard. Shown only when there
-            is one; the user can dismiss it without losing the timer. */}
+        {/* Focus queue handoff from the dashboard. The head is the current
+            task; the tail auto-advances after each Pomodoro. Dismissable. */}
         <AnimatePresence initial={false}>
           {activeTask && (
             <motion.div
-              key={activeTask.id}
+              key="focus-queue"
               initial={{ height: 0, opacity: 0, y: -4 }}
               animate={{ height: "auto", opacity: 1, y: 0 }}
               exit={{ height: 0, opacity: 0, y: -4 }}
@@ -372,19 +400,52 @@ export default function TimerPage() {
               className="overflow-hidden"
             >
               <div
-                className={`mt-3 flex items-center gap-2 rounded-2xl px-3 py-2 transition-colors ${
+                className={`mt-3 flex flex-col gap-1.5 rounded-2xl px-3 py-2.5 transition-colors ${
                   taskDone ? "bg-fleent-green/10" : "bg-fleent-orange/10"
                 }`}
               >
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-[10px] font-bold tracking-[0.14em] uppercase ${
+                      taskDone ? "text-fleent-green" : "text-fleent-orange"
+                    }`}
+                  >
+                    {taskDone ? "Completed" : "Focusing on"}
+                  </span>
+                  {!taskDone && queue.length > 1 && (
+                    <span className="rounded-full bg-white/70 px-1.5 py-0.5 text-[10px] font-bold tabular-nums tracking-wider text-fleent-orange">
+                      {queue.length} queued
+                    </span>
+                  )}
+                  <span className="ml-auto flex items-center gap-1">
+                    {!taskDone && (
+                      <button
+                        type="button"
+                        onClick={handleMarkActiveTaskDone}
+                        aria-label="Mark task done"
+                        className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-fleent-orange transition-colors hover:bg-white"
+                      >
+                        <CheckCircle size={16} weight="fill" />
+                      </button>
+                    )}
+                    {taskDone && (
+                      <span className="inline-flex size-7 shrink-0 items-center justify-center text-fleent-green">
+                        <CheckCircle size={18} weight="fill" />
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleDismissQueue}
+                      aria-label={taskDone ? "Dismiss" : "Stop focusing"}
+                      className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-fleent-mute transition-colors hover:bg-white hover:text-fleent-ink"
+                    >
+                      <X size={14} weight="bold" />
+                    </button>
+                  </span>
+                </div>
+
                 <span
-                  className={`text-[10px] font-bold tracking-[0.14em] uppercase ${
-                    taskDone ? "text-fleent-green" : "text-fleent-orange"
-                  }`}
-                >
-                  {taskDone ? "Completed" : "Focusing on"}
-                </span>
-                <span
-                  className={`min-w-0 flex-1 truncate text-sm font-semibold tracking-tight ${
+                  className={`min-w-0 truncate text-sm font-semibold tracking-tight ${
                     taskDone
                       ? "text-fleent-mute line-through"
                       : "text-fleent-ink"
@@ -392,34 +453,13 @@ export default function TimerPage() {
                 >
                   {activeTask.title}
                 </span>
-                {!taskDone && (
-                  <button
-                    type="button"
-                    onClick={handleMarkActiveTaskDone}
-                    aria-label="Mark task done"
-                    className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-fleent-orange transition-colors hover:bg-white"
-                  >
-                    <CheckCircle size={16} weight="fill" />
-                  </button>
-                )}
-                {taskDone && (
-                  <span className="inline-flex size-7 shrink-0 items-center justify-center text-fleent-green">
-                    <CheckCircle size={18} weight="fill" />
+
+                {!taskDone && queue.length > 1 && (
+                  <span className="min-w-0 truncate text-xs tracking-wide text-fleent-mute">
+                    Up next: {queue[1].title}
+                    {queue.length > 2 ? ` +${queue.length - 2} more` : ""}
                   </span>
                 )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveTask(null);
-                    setTaskDone(false);
-                  }}
-                  aria-label={
-                    taskDone ? "Dismiss" : "Stop focusing on this task"
-                  }
-                  className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-fleent-mute transition-colors hover:bg-white hover:text-fleent-ink"
-                >
-                  <X size={14} weight="bold" />
-                </button>
               </div>
             </motion.div>
           )}
@@ -838,6 +878,39 @@ function readPersistedTimer(): PersistedTimer | null {
 
 function persistTimer(value: PersistedTimer) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+}
+
+/** Read + validate the focus queue handed off from the dashboard. */
+function readStoredQueue(): ActiveTask[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.sessionStorage.getItem(FOCUS_QUEUE_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (t): t is ActiveTask =>
+        !!t &&
+        typeof (t as ActiveTask).id === "string" &&
+        typeof (t as ActiveTask).title === "string",
+    );
+  } catch {
+    return [];
+  }
+}
+
+/** Persist the remaining queue so a refresh resumes mid-breakdown. */
+function writeStoredQueue(queue: ActiveTask[]) {
+  if (typeof window === "undefined") return;
+  try {
+    if (queue.length === 0) {
+      window.sessionStorage.removeItem(FOCUS_QUEUE_KEY);
+    } else {
+      window.sessionStorage.setItem(FOCUS_QUEUE_KEY, JSON.stringify(queue));
+    }
+  } catch {
+    // sessionStorage unavailable (private mode etc.) — queue stays in memory.
+  }
 }
 
 function isMode(value: unknown): value is Mode {
