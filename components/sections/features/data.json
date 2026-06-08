@@ -1,7 +1,7 @@
 {
   "eyebrow": "Features",
-  "heading": "Your day, decoded.",
-  "subheading": "We've stripped away the clutter of traditional productivity tools. By combining smart calendar filtering with AI-powered micro-steps, we help you find momentum in the gaps.",
+  "heading": "This isn't your average to-do list",
+  "subheading": "Three tasks. AI breakdowns. A pet that grows as you work. Yeah, it's different.",
   "items": [
     {
       "title": "The Triple-Threat",
@@ -26,18 +26,6 @@
       },
       "imagePosition": "top",
       "imageBleed": "left"
-    },
-    {
-      "title": "Calendar Gaps",
-      "body": "Temporal Intelligence.\nWe don't just sync your calendar; we find the \"white space\" between meetings and suggest tasks that actually fit.",
-      "image": {
-        "src": "/images/Fleent-Calender-gaps.svg",
-        "alt": "A weekly calendar strip highlighting open gaps between meetings.",
-        "width": 463,
-        "height": 250
-      },
-      "imagePosition": "top",
-      "imageBleed": "top"
     },
     {
       "title": "Starting Streaks",

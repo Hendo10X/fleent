@@ -8,7 +8,7 @@ import {
   motion,
   MotionConfig,
 } from "motion/react";
-import { CircleNotch } from "@phosphor-icons/react";
+import { CircleNotch, Fire } from "@phosphor-icons/react";
 import data from "./data.json";
 
 type Color = "orange" | "blue" | "green";
@@ -157,12 +157,13 @@ export function How() {
 }
 
 function StepScene({ step }: { step: Step }) {
-  if (step.id === "sync") return <SyncScene image={step.image} />;
+  if (step.id === "profile") return <ProfileScene image={step.image} />;
   if (step.id === "dump") return <DumpScene image={step.image} />;
+  if (step.id === "timer") return <TimerScene image={step.image} />;
   return <FlipScene image={step.image} />;
 }
 
-function SyncScene({ image }: { image: Step["image"] }) {
+function ProfileScene({ image }: { image: Step["image"] }) {
   return (
     <div className="flex h-full flex-col">
       <div className="flex flex-col items-center gap-3 px-6 pt-14 pb-10">
@@ -231,6 +232,37 @@ function FlipScene({ image }: { image: Step["image"] }) {
         </span>
         <span className="text-2xl font-extrabold tracking-tight text-fleent-blue">
           4 day streaks
+        </span>
+      </div>
+      <div className="mt-auto px-6">
+        <Image
+          src={image.src}
+          alt={image.alt}
+          width={image.width}
+          height={image.height}
+          className="block h-auto w-full select-none"
+          draggable={false}
+          priority
+        />
+      </div>
+    </div>
+  );
+}
+
+/** The fourth card - the focus timer warming the pet up. */
+function TimerScene({ image }: { image: Step["image"] }) {
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex flex-col items-center gap-2 px-6 pt-12 pb-8">
+        <span className="inline-flex items-center gap-2 text-2xl font-extrabold tracking-tight text-fleent-orange">
+          <Fire size={26} weight="fill" />
+          focus on
+        </span>
+        <span className="font-mono text-4xl font-bold tabular-nums tracking-tight text-fleent-ink">
+          24:36
+        </span>
+        <span className="text-fleent-body tracking-wide text-fleent-mute">
+          getting warmer...
         </span>
       </div>
       <div className="mt-auto px-6">

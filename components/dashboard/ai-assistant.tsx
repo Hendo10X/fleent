@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { DefaultChatTransport } from "ai";
 import { useChat } from "@ai-sdk/react";
 import { AnimatePresence, motion } from "motion/react";
 import {
   ArrowRight,
+  Check,
   Copy,
+  ListChecks,
   MagicWand,
   Notepad,
   Sparkle,
@@ -14,6 +17,7 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
+import { createTaskWithBreakdown } from "@/app/dashboard/actions";
 
 const EXAMPLES = [
   "Write the quarterly report",
@@ -24,8 +28,36 @@ const EXAMPLES = [
 
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 
+/**
+ * Pull the actionable steps out of the model's freeform breakdown. The
+ * system prompt asks for a title line followed by numbered steps, so we
+ * prefer list-marker lines (`1.`, `-`, `•`); if none are found we fall back
+ * to every line after the first (treated as the title). Capped at 5 to match
+ * the server's breakdown limit.
+ */
+function parseStepsFromBreakdown(text: string): string[] {
+  const lines = text
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const listItems = lines
+    .filter((l) => /^(\d+[.)]|[-*•])\s+/.test(l))
+    .map((l) => l.replace(/^(\d+[.)]|[-*•])\s+/, "").trim())
+    .filter(Boolean);
+
+  const steps = listItems.length >= 2 ? listItems : lines.slice(1);
+  return steps.slice(0, 5);
+}
+
 export function AIAssistant() {
+  const router = useRouter();
   const [task, setTask] = useState("");
+  // The task text at submit time - the parent title when pushing to tasks.
+  const [submittedTask, setSubmittedTask] = useState("");
+  const [pushing, setPushing] = useState(false);
+  const [pushed, setPushed] = useState(false);
+
   const { messages, sendMessage, setMessages, status, error } = useChat({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
   });
@@ -40,19 +72,53 @@ export function AIAssistant() {
       .join("\n")
       .trim() ?? "";
 
+  const isBusy = status === "submitted" || status === "streaming";
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     const value = task.trim();
-    if (!value || status === "submitted" || status === "streaming") return;
+    if (!value || isBusy) return;
 
+    setSubmittedTask(value);
+    setPushed(false);
     setMessages([]);
     await sendMessage({ text: value });
   }
 
   async function handleExample(example: string) {
     setTask(example);
+    setSubmittedTask(example);
+    setPushed(false);
     setMessages([]);
     await sendMessage({ text: example });
+  }
+
+  async function handlePushToTasks() {
+    const steps = parseStepsFromBreakdown(responseText);
+    const parentTitle = submittedTask.trim() || steps[0] || "New task";
+    if (steps.length === 0) {
+      toast.error("Couldn't read the steps - try breaking it down again.");
+      return;
+    }
+
+    setPushing(true);
+    try {
+      await createTaskWithBreakdown({
+        parent: { id: crypto.randomUUID(), title: parentTitle },
+        steps: steps.map((title) => ({ id: crypto.randomUUID(), title })),
+        shared: {},
+      });
+      setPushed(true);
+      toast.success("Added to your tasks", {
+        action: { label: "View", onClick: () => router.push("/dashboard") },
+      });
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : "Couldn't add to your tasks.",
+      );
+    } finally {
+      setPushing(false);
+    }
   }
 
   return (
@@ -147,7 +213,8 @@ export function AIAssistant() {
                     await navigator.clipboard.writeText(responseText);
                     toast.success("Copied.");
                   }}
-                  className="inline-flex size-10 items-center justify-center rounded-full bg-[#F3F3F3] text-fleent-ink transition-colors duration-200 ease-out hover:bg-[#ECECEC]"
+                  aria-label="Copy breakdown"
+                  className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-[#F3F3F3] text-fleent-ink transition-colors duration-200 ease-out hover:bg-[#ECECEC]"
                 >
                   <Copy size={16} weight="bold" />
                 </button>
@@ -156,6 +223,31 @@ export function AIAssistant() {
               <div className="mt-5 whitespace-pre-wrap text-sm leading-7 tracking-wide text-fleent-ink">
                 {responseText}
               </div>
+
+              {/* Push the breakdown to the home dashboard as a real task
+                  (parent + step children) via the shared server action. */}
+              {!isBusy && (
+                <button
+                  type="button"
+                  onClick={handlePushToTasks}
+                  disabled={pushing || pushed}
+                  className="mt-5 inline-flex h-10 w-full items-center justify-center gap-2 rounded-full bg-fleent-orange px-4 text-sm font-semibold tracking-tight text-white transition-colors duration-200 ease-out hover:bg-fleent-orange/90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {pushing ? (
+                    <Spinner className="size-4 text-white" />
+                  ) : pushed ? (
+                    <>
+                      <Check size={16} weight="bold" />
+                      Added to your tasks
+                    </>
+                  ) : (
+                    <>
+                      <ListChecks size={16} weight="bold" />
+                      Add to my tasks
+                    </>
+                  )}
+                </button>
+              )}
             </motion.section>
           ) : (
             <motion.section

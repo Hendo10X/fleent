@@ -258,7 +258,7 @@ function ThreeTasksDemo() {
 // clean ranked list.
 
 const RAW_DUMP =
-  "ugh — email mom, dentist call sometime, that PR from sam, laundry, doc draft, insurance ??"
+  "ugh - email mom, dentist call sometime, that PR from sam, laundry, doc draft, insurance ??"
 const SORTED = ["Email mom back", "Reply to Sam's PR", "Pick up laundry"]
 
 function BrainDumpDemo() {

@@ -104,7 +104,7 @@ export function DockBar({ user }: Props) {
             </div>
           </LayoutGroup>
 
-          {/* Avatar → Settings. Hidden on small screens — the avatar is
+          {/* Avatar → Settings. Hidden on small screens - the avatar is
               available in other surfaces (e.g. profile menu) when needed. */}
           <Link
             href="/dashboard/settings"

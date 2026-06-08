@@ -3,7 +3,7 @@
  *
  * All numeric and palette values used by `<Fire />`, `<Bean />`, and
  * `<FocusScene />` live here. Magic numbers in the component files would
- * make a future palette/timing pass a nightmare — every dial sits in this
+ * make a future palette/timing pass a nightmare - every dial sits in this
  * file so the visual designer can tune them in one place.
  */
 
@@ -192,7 +192,7 @@ export const BEAN_BODY = { cx: 60, cy: 60, r: 45 } as const;
  * underlying transforms when `mood` is set explicitly on `<Bean />`.
  *
  * Keeping moods as "synthetic intensities" lets the same body-colour /
- * cheek-blush / ice-decor pipeline serve both modes — no parallel rendering
+ * cheek-blush / ice-decor pipeline serve both modes - no parallel rendering
  * path required.
  */
 export const BEAN_MOOD_INTENSITY = {

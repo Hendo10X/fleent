@@ -8,7 +8,7 @@ import { PageHero } from "@/components/page-hero";
 const HIGHLIGHTS = [
   {
     title: "Brain-dump in 30 seconds.",
-    body: "Type or speak — Fleent extracts the actionable bits and ignores the rest.",
+    body: "Type or speak - Fleent extracts the actionable bits and ignores the rest.",
   },
   {
     title: "Three tasks, ranked by friction.",

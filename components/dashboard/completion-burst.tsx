@@ -6,10 +6,10 @@ import { motion } from "motion/react";
  * Tiny celebratory burst that fires when a task is marked complete.
  *
  * Six dust particles radiate outward in a wide arc with brand-flavored
- * colors. CSS-only (motion's `keyframes` + transform) — no canvas, no deps,
+ * colors. CSS-only (motion's `keyframes` + transform) - no canvas, no deps,
  * unmounts cleanly via the parent's `AnimatePresence`.
  *
- * Designed to feel like a small "yes!" — not a parade.
+ * Designed to feel like a small "yes!" - not a parade.
  */
 const PARTICLES = [
   { angle: -90, color: "#FF8629" },

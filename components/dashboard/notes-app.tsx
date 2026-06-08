@@ -105,7 +105,7 @@ export function NotesApp({ storageKey }: Props) {
               Notes
             </h1>
             <p className="mt-1 text-sm tracking-wide text-fleent-mute">
-              Write here — saved on this device.
+              Write here - saved on this device.
             </p>
           </div>
 

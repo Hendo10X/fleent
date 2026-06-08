@@ -7,7 +7,7 @@ const googleRedirectURI =
   process.env.GOOGLE_REDIRECT_URI?.trim() ??
   (baseURL ? `${baseURL}/api/auth/callback/google` : undefined);
 
-// Session lifetime — kept in one place so it's easy to tune.
+// Session lifetime - kept in one place so it's easy to tune.
 //
 //   expiresIn  → hard cap on a session's age. Beyond this, the cookie is
 //                rejected and the user is bounced back to the login form.
@@ -18,7 +18,7 @@ const googleRedirectURI =
 //                re-authenticate after 3 days.
 //
 // The previous (default) config kept sessions alive for 7 days with no
-// effective ceiling — so visiting `/login` after weeks away would silently
+// effective ceiling - so visiting `/login` after weeks away would silently
 // redirect straight to `/dashboard` instead of presenting a sign-in form.
 const SESSION_EXPIRES_IN_SECONDS = 60 * 60 * 24 * 3; // 3 days
 const SESSION_UPDATE_AGE_SECONDS = 60 * 60 * 24; // 1 day

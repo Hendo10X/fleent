@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { Fire } from "@/components/flint/Fire";
 import { Bean } from "@/components/flint/Bean";
 import { toggleTaskComplete } from "@/app/dashboard/actions";
+import { fireTaskConfetti } from "@/lib/ui/confetti";
 
 type Mode = "focus" | "short" | "long";
 
@@ -63,6 +64,9 @@ export default function TimerPage() {
     const title = searchParams.get("taskTitle");
     return id && title ? { id, title } : null;
   });
+  // Stays true once the active task is completed - keeps the banner visible
+  // with a strike-through instead of yanking it away.
+  const [taskDone, setTaskDone] = useState(false);
 
   const [mode, setModeState] = useState<Mode>("focus");
   const [running, setRunning] = useState(false);
@@ -214,13 +218,14 @@ export default function TimerPage() {
       setPomodorosDone((p) => p + 1);
 
       // If the user started this session from a dashboard task, mark it
-      // done now. Fire-and-forget — the optimistic UI on the dashboard
-      // picks it up on the next visit; here we just clear the banner.
+      // done now. The banner stays - it flips to a struck-through "done"
+      // state and we fire confetti. Dismissing the banner clears it.
       const finishedTask = activeTaskRef.current;
       if (finishedTask) {
-        setActiveTask(null);
+        setTaskDone(true);
+        fireTaskConfetti();
         toggleTaskComplete(finishedTask.id)
-          .then(() => toast.success(`"${finishedTask.title}" — done!`))
+          .then(() => toast.success(`"${finishedTask.title}" - done!`))
           .catch(() => toast.error("Couldn't mark the task done."));
       }
 
@@ -239,10 +244,11 @@ export default function TimerPage() {
 
   function handleMarkActiveTaskDone() {
     const t = activeTaskRef.current;
-    if (!t) return;
-    setActiveTask(null);
+    if (!t || taskDone) return;
+    setTaskDone(true);
+    fireTaskConfetti();
     toggleTaskComplete(t.id)
-      .then(() => toast.success(`"${t.title}" — done!`))
+      .then(() => toast.success(`"${t.title}" - done!`))
       .catch(() => toast.error("Couldn't mark the task done."));
   }
 
@@ -315,7 +321,7 @@ export default function TimerPage() {
   return (
     <main className="flex min-h-[calc(100dvh-6.5rem)] flex-col px-6 pt-6 pb-24">
       <section className="mx-auto flex w-full max-w-md flex-1 flex-col">
-        {/* Compact header — title + settings on one row */}
+        {/* Compact header - title + settings on one row */}
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-xl font-bold tracking-tight text-fleent-ink">
             Pomodoro
@@ -365,25 +371,51 @@ export default function TimerPage() {
               transition={{ duration: 0.22, ease: EASE_OUT }}
               className="overflow-hidden"
             >
-              <div className="mt-3 flex items-center gap-2 rounded-2xl bg-fleent-orange/10 px-3 py-2">
-                <span className="text-[10px] font-bold tracking-[0.14em] text-fleent-orange uppercase">
-                  Focusing on
+              <div
+                className={`mt-3 flex items-center gap-2 rounded-2xl px-3 py-2 transition-colors ${
+                  taskDone ? "bg-fleent-green/10" : "bg-fleent-orange/10"
+                }`}
+              >
+                <span
+                  className={`text-[10px] font-bold tracking-[0.14em] uppercase ${
+                    taskDone ? "text-fleent-green" : "text-fleent-orange"
+                  }`}
+                >
+                  {taskDone ? "Completed" : "Focusing on"}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight text-fleent-ink">
+                <span
+                  className={`min-w-0 flex-1 truncate text-sm font-semibold tracking-tight ${
+                    taskDone
+                      ? "text-fleent-mute line-through"
+                      : "text-fleent-ink"
+                  }`}
+                >
                   {activeTask.title}
                 </span>
+                {!taskDone && (
+                  <button
+                    type="button"
+                    onClick={handleMarkActiveTaskDone}
+                    aria-label="Mark task done"
+                    className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-fleent-orange transition-colors hover:bg-white"
+                  >
+                    <CheckCircle size={16} weight="fill" />
+                  </button>
+                )}
+                {taskDone && (
+                  <span className="inline-flex size-7 shrink-0 items-center justify-center text-fleent-green">
+                    <CheckCircle size={18} weight="fill" />
+                  </span>
+                )}
                 <button
                   type="button"
-                  onClick={handleMarkActiveTaskDone}
-                  aria-label="Mark task done"
-                  className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-fleent-orange transition-colors hover:bg-white"
-                >
-                  <CheckCircle size={16} weight="fill" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTask(null)}
-                  aria-label="Stop focusing on this task"
+                  onClick={() => {
+                    setActiveTask(null);
+                    setTaskDone(false);
+                  }}
+                  aria-label={
+                    taskDone ? "Dismiss" : "Stop focusing on this task"
+                  }
                   className="inline-flex size-7 shrink-0 items-center justify-center rounded-full text-fleent-mute transition-colors hover:bg-white hover:text-fleent-ink"
                 >
                   <X size={14} weight="bold" />

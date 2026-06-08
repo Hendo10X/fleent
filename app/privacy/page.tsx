@@ -5,7 +5,7 @@ import { PageHero } from "@/components/page-hero";
 const SECTIONS = [
   {
     title: "What we collect",
-    body: "Account info you give us (email, name), the tasks and dumps you create, and the calendar metadata we need to find your gaps. We never read the contents of your calendar events — only the time blocks they occupy.",
+    body: "Account info you give us (email, name), the tasks and dumps you create, and the calendar metadata we need to find your gaps. We never read the contents of your calendar events - only the time blocks they occupy.",
   },
   {
     title: "How we use it",
@@ -37,7 +37,7 @@ const SECTIONS = [
   },
   {
     title: "Contact",
-    body: "Questions? privacy@fleent.app — answered by a human, usually within one working day.",
+    body: "Questions? privacy@fleent.app - answered by a human, usually within one working day.",
   },
 ];
 

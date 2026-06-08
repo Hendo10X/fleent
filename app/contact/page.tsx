@@ -83,7 +83,7 @@ export default function ContactPage() {
                 Or send a quick note
               </h2>
               <p className="mt-3 text-fleent-body tracking-wide text-fleent-mute">
-                Anything goes — feature ideas, bug reports, or just hi.
+                Anything goes - feature ideas, bug reports, or just hi.
               </p>
 
               <form
@@ -107,7 +107,7 @@ export default function ContactPage() {
                   disabled={sent}
                   className="inline-flex h-12 items-center justify-center self-start rounded-full bg-fleent-orange px-6 text-sm font-semibold tracking-wide text-white transition-colors duration-200 ease-out hover:bg-fleent-orange/90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {sent ? "Thanks — we'll be in touch." : "Send"}
+                  {sent ? "Thanks - we'll be in touch." : "Send"}
                 </button>
               </form>
             </div>

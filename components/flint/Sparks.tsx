@@ -25,7 +25,7 @@ import {
 
 /**
  * One-shot module-level init. The exception to the brief's "no useEffect"
- * rule is gated to the engine-bootstrap line below — there is no React-safe
+ * rule is gated to the engine-bootstrap line below - there is no React-safe
  * way to await an engine outside an effect with `@tsparticles/react@3`.
  */
 let enginePromise: Promise<void> | null = null;

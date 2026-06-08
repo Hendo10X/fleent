@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * `<FocusScene />` — composition only.
+ * `<FocusScene />` - composition only.
  *
  * Stacks Fire above Bean in a single vertical column and forwards the
  * shared `intensity` to both. No business logic, no timer, no clock. The

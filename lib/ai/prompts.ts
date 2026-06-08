@@ -1,6 +1,6 @@
 /**
  * Central registry for Fleent's AI system prompts.
- * Keep them terse and concrete — Llama 3.3 follows tight contracts well.
+ * Keep them terse and concrete - Llama 3.3 follows tight contracts well.
  */
 
 export const BREAKDOWN_SYSTEM = `You break one task into 2–5 small, doable steps.
